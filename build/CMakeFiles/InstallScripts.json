@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/L/Desktop/project/UCanTCPmini/build/cmake_install.cmake",
+		"C:/Users/L/Desktop/project/UCanTCPmini/build/src/xnet_tiny/cmake_install.cmake",
+		"C:/Users/L/Desktop/project/UCanTCPmini/build/src/xnet_app/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
