@@ -23,9 +23,11 @@
  * ..... 更多功能开发中...........
  * 如果你有兴趣的话，请扫仓库中的二维码，或者点击以上面的链接可找到该课程。
  */
+
 #include "tiny_net.h"
 #include "pcap_device.h"
 #include "arp.h"
+#include "config.h"
 
 
 void net_init()
@@ -34,6 +36,15 @@ void net_init()
     if(!device){
         printf("打开网卡失败\n");
     }
+    //数据链路层
+    memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
+    //网络层
+    arp_packet_template.htype = 1; 
+    arp_packet_template.ptype = 0x0800;
+    arp_packet_template.hlen = 6;
+    arp_packet_template.plen = 4;
+    memcpy(arp_packet_template.sender_mac,host_mac,6);
+    memcpy(arp_packet_template.sender_ip,host_ip_addr,4);
 
     
 }
@@ -41,51 +52,48 @@ void net_set_host_info(uint8_t* ip,uint8_t* mac){
      device =  pcap_device_open(ip,mac,0);
 }
 
-//创建数据包
-packet* packet_creator(uint32_t size)
-{
-    // packet* target =  malloc(sizeof(packet));
-    // target->data = malloc(size);
-    // target->size = size;
-    packet* target =  malloc(sizeof(packet));
-    return target;
-}
-
 
 
 //接收数据包
 void net_recv(){
-    packet* packet = packet_creator(packet_default_size);
-    uint32_t len = pcap_device_read(device,packet->data,packet->size);
+    packet* packet_receive =  malloc(sizeof(packet));
+    uint32_t len = pcap_device_read(device,packet_receive,sizeof(packet));
     if(len > 0){
-        packet->size = len;
-        print_packet(packet);
-        packet_process(packet);//给协议栈解析处理
+        print_packet(packet_receive);
+        packet_process(packet_receive);//给协议栈解析处理
     }
-    free(packet);
+    else if(len != 0){
+        printf("接收数据包出错\n");
+    }
+    free(packet_receive);
     
 
 }
 
 //发送数据包
-void net_send(packet* packet){
-    pcap_device_send(device,packet->data,packet->size);
+void net_send(packet* packet_send){
+  uint32_t res =  pcap_device_send(device,packet_send->data,sizeof(packet));
+  if(res > 0){
+      printf("发送数据包成功\n");
+  }
+  else{
+      printf("发送数据包失败\n");
+  }
+
 }
 
 //处理数据包
-void packet_process(packet* packet){
-    //打印数据包
-    printf("接收数据包：%d\n",packet->size);
+void packet_process(packet* packet_receive){
     //判断数据包类型
-    uint8_t typeH = packet->data[12],typeL = packet->data[13];
-    uint16_t type = (typeH << 8) | typeL;  
+    print_packet(packet_receive);
+    uint16_t type = packet_receive->ether_type;
     switch (type)
     {
     case ARP_TYPE:
-        arp_process(packet);
+        arp_process(packet_receive);
         break;
     case IP_TYPE:
-        arp_process(packet);
+        arp_process(packet_receive);
         break;
     default:
         break;
@@ -101,10 +109,10 @@ void net_run(){
 }
 
 //打印数据包
-void print_packet(packet* packet){
-    printf("接收数据包：%d\n",packet->size);
-    for(int i = 0;i < packet->size;i++){
-        printf("%02x ",packet->data[i]);
+void print_packet(packet* packet_receive){
+    printf("接收数据包：\n");
+    for(int i = 0;i < sizeof(packet);i++){
+        printf("%02x ",*(packet_receive+i));
         if((i+1)%16 == 0){
             printf("\n");
         }

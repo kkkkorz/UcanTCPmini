@@ -25,13 +25,10 @@
  */
 #include <stdio.h>
 #include "tiny_net.h"
-
 int main (void) {
     //初始化协议栈
     net_init();
     net_run();
-    while (1) {
-    }
 
     return 0;
 }

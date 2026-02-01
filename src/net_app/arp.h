@@ -9,7 +9,10 @@
 
 
 void arp_init();
-arp_packet* arp_process(packet* packet);//解析为ARP数据包
-void arp_send(uint8_t* ip,uint8_t* mac);//发送ARP数据包
+void arp_process(packet* packet);//解析为ARP数据包
+void arp_reply(packet* packet);//回应ARP数据包
+void arp_request(uint8_t* ip,uint8_t* mac);//发送ARP请求
+//打印arp数据包
+void arp_print(arp_packet* arp);
 
 #endif

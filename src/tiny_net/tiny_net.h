@@ -23,33 +23,13 @@
  * ..... 更多功能开发中...........
  * 如果你有兴趣的话，请扫仓库中的d二维码，或者点击以上面的链接可找到该课程。
  */
-#ifndef TINE_NET_H
-#define TINE_NET_H
-#include <stdint.h>
-#include "pcap/pcap.h"
-#include "packet_define.h"
-//主机的IP地址和MAC地址
-static char* host_ip = "192.168.254.1";//模拟一个IP地址
-//0A:00:27:00:00:13
-static uint8_t host_mac[6] = {0x0A,0x00,0x27,0x00,0x00,0x13};
-//设备控制器
-static pcap_t* device = NULL;
-
-//数据包默认大小
-static unsigned int packet_default_size = 2048;
-
-//0806 ARP
-#define ARP_TYPE  0x0806
-//0800 IP
-#define IP_TYPE  0x0800
-
+#ifndef TINY_NET_H
+#define TINY_NET_H
+#include "packet.h"
 
 
 //数据包初始化
-
 packet* packet_creator(uint32_t size);
-
-
 
 //初始化协议栈
 void net_init();
