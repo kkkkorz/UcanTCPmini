@@ -21,10 +21,62 @@
  * 7. 提供socket接口供应用程序使用
  * 8、代码可移植，可移植到arm和x86平台上
  * ..... 更多功能开发中...........
- * 如果你有兴趣的话，请扫仓库中的二维码，或者点击以上面的链接可找到该课程。
+ * 如果你有兴趣的话，请扫仓库中的d二维码，或者点击以上面的链接可找到该课程。
  */
-#ifndef XNET_TINY_H
-#define XNET_TINY_H
+#ifndef TINE_NET_H
+#define TINE_NET_H
+#include <stdint.h>
+#include "pcap/pcap.h"
+//主机的IP地址和MAC地址
+static char* host_ip = "192.168.254.1";//模拟一个IP地址
+//0A:00:27:00:00:13
+static uint8_t host_mac[6] = {0x0A,0x00,0x27,0x00,0x00,0x13};
+//设备控制器
+static pcap_t* device = NULL;
+
+//数据包默认大小
+static unsigned int packet_default_size = 2048;
+
+//0806 ARP
+#define ARP_TYPE  0x0806
+//0800 IP
+#define IP_TYPE  0x0800
+
+//网卡收到的数据包结构体
+typedef struct packet
+{
+    uint8_t* data;//数据
+    uint32_t  size;//数据长度
+
+}packet;
+
+//数据包初始化
+
+packet* packet_creator(uint32_t size);
+
+
+
+//初始化协议栈
+void net_init();
+
+//设置主机的IP地址和MAC地址
+void net_set_host_info(uint8_t* ip,uint8_t* mac);
+
+//接收数据包
+void net_recv(packet* packet);
+
+//发送数据包
+void net_send(packet* packet);
+
+//处理数据包
+void packet_process(packet* packet);
+
+//运行协议栈
+void net_run();
+
+//打印数据包
+void print_packet(packet* packet);
+
 
 #endif // XNET_TINY_H
 

@@ -24,10 +24,12 @@
  * 如果你有兴趣的话，请扫仓库中的二维码，或者点击以上面的链接可找到该课程。
  */
 #include <stdio.h>
-#include "xnet_tiny.h"
+#include "tiny_net.h"
 
 int main (void) {
-    printf("xnet running\n");
+    //初始化协议栈
+    net_init();
+    net_run();
     while (1) {
     }
 

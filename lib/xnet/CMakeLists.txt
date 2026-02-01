@@ -3,4 +3,4 @@ include_directories(
 )
 
 aux_source_directory(. DIR_HELLO_SRCS)
-add_library(xnet_lib  ${DIR_HELLO_SRCS} )
+add_library(net_lib  ${DIR_HELLO_SRCS} )
