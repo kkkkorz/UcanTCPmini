@@ -44,9 +44,10 @@ void net_set_host_info(uint8_t* ip,uint8_t* mac){
 //创建数据包
 packet* packet_creator(uint32_t size)
 {
+    // packet* target =  malloc(sizeof(packet));
+    // target->data = malloc(size);
+    // target->size = size;
     packet* target =  malloc(sizeof(packet));
-    target->data = malloc(size);
-    target->size = size;
     return target;
 }
 
@@ -61,7 +62,6 @@ void net_recv(){
         print_packet(packet);
         packet_process(packet);//给协议栈解析处理
     }
-    free(packet->data);
     free(packet);
     
 

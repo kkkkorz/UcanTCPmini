@@ -7,6 +7,7 @@ include_directories(
         ${PROJECT_SOURCE_DIR}/src/net_app
         ${PROJECT_SOURCE_DIR}/src/tiny_net
         ${PROJECT_SOURCE_DIR}/lib/xnet
+        ${PROJECT_SOURCE_DIR}/src/packet
 )
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/lib/npcap/Lib/x64)
 

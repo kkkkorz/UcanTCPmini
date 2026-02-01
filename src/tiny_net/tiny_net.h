@@ -27,6 +27,7 @@
 #define TINE_NET_H
 #include <stdint.h>
 #include "pcap/pcap.h"
+#include "packet_define.h"
 //主机的IP地址和MAC地址
 static char* host_ip = "192.168.254.1";//模拟一个IP地址
 //0A:00:27:00:00:13
@@ -42,13 +43,7 @@ static unsigned int packet_default_size = 2048;
 //0800 IP
 #define IP_TYPE  0x0800
 
-//网卡收到的数据包结构体
-typedef struct packet
-{
-    uint8_t* data;//数据
-    uint32_t  size;//数据长度
 
-}packet;
 
 //数据包初始化
 
