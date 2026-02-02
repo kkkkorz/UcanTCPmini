@@ -30,88 +30,117 @@
 #include "config.h"
 #include "util.h"
 
-
 void net_init()
-{ 
-    device =  pcap_device_open(real_host_ip,real_host_mac,0);//打开物理网卡
-    if(!device){
+{
+    device = pcap_device_open(real_host_ip, real_host_mac, 0); // 打开物理网卡
+    if (!device)
+    {
         printf("打开网卡失败\n");
     }
-    //数据链路层
-    memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
-    //网络层
-    arp_packet_template.htype =SWAP_UINT16((uint16_t)1);
+    // 数据链路层
+    memcpy(packet_template.source_mac, host_mac, 6); // 填充源MAC地址
+    // 网络层
+    arp_packet_template.htype = SWAP_UINT16((uint16_t)1);
     arp_packet_template.ptype = SWAP_UINT16((uint16_t)0x0800);
     arp_packet_template.hlen = (uint8_t)6;
     arp_packet_template.plen = (uint8_t)4;
-    memcpy(arp_packet_template.sender_mac,host_mac,6);
-    memcpy(arp_packet_template.sender_ip,host_ip_addr,4);
-
-    
+    memcpy(arp_packet_template.sender_mac, host_mac, 6);
+    memcpy(arp_packet_template.sender_ip, host_ip_addr, 4);
 }
-//接收数据包
-void net_recv(){
-    packet* packet_receive = malloc(sizeof(packet));
+// 接收数据包
+void net_recv()
+{
+    packet *packet_receive = malloc(sizeof(packet));
     uint32_t len = pcap_device_read(device, packet_receive, sizeof(packet));
     // print_packet(packet_receive,len);
-    if(len > 0){
-         // print_packet(packet_receive,len);
-          packet_process(packet_receive);
+    if (len > 0)
+    {
+        // print_packet(packet_receive,len);
+        packet_process(packet_receive);
     }
-    else if(len < 0){
+    else if (len < 0)
+    {
         printf("接收数据包出错\n");
     }
     free(packet_receive);
 }
 
-//发送数据包
-void net_send(packet* packet_send,uint32_t len){
+// 发送数据包
+void net_send(packet *packet_send, uint32_t len)
+{
 
-  uint32_t res =  pcap_device_send(device,packet_send,len);
-  if(res >= 0){
-      printf("发送数据包成功\n");
-  }
-  else{
-      printf("发送数据包失败\n");
-  }
-
+    uint32_t res = pcap_device_send(device, packet_send, len);
+    if (res >= 0)
+    {
+        printf("发送数据包成功\n");
+    }
+    else
+    {
+        printf("发送数据包失败\n");
+    }
 }
 
-//处理数据包
-void packet_process(packet* packet_receive){
-    //判断数据包类型
+// 数据链路层发送，上层调用无需关心数据包头
+void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len)
+{
+    packet *packet_send = (packet *)malloc(len + 14);
+    // 这里增加数据链路层的包头
+    memcpy(packet_send->destination_mac, destination, 6);
+    memcpy(packet_send->source_mac, source, 6);
+    packet_send->ether_type = ether_type;
+    SWAP_UINT16(packet_send->ether_type);//处理UINT16
+    // 连接数据
+    memcpy(packet_send->data, up_packet_send, len);
+    uint32_t res = pcap_device_send(device, packet_send, len + 14); // 14是数据链路层头
+    if (res >= 0)
+    {
+        printf("发送数据包成功\n");
+    }
+    else
+    {
+        printf("发送数据包失败\n");
+    }
+}
+
+// 处理数据包
+void packet_process(packet *packet_receive)
+{
+    // 判断数据包类型
     uint16_t type = packet_receive->ether_type;
     type = SWAP_UINT16(type);
-    printf("数据包类型：%d\n",type);
+    printf("数据包类型：%d\n", type);
     switch (type)
     {
     case ARP_TYPE:
         arp_process(packet_receive);
         break;
     case IP_TYPE:
-        //arp_process(packet_receive);
+        // arp_process(packet_receive);
         break;
     default:
         break;
-    } 
-
-
+    }
 }
-//持续运行
-void net_run(){
-    while(1){
+// 持续运行
+void net_run()
+{
+    while (1)
+    {
         net_recv();
         Sleep(10);
     }
 }
 
-//打印数据包
-void print_packet(packet* packet_receive,uint32_t len){
-    printf("数据包结构体大小：%d\n",sizeof(packet));
-    uint8_t* pointer = (uint8_t*)packet_receive;
-    for(int i = 0;i < len;i++){
-        printf("%02x ",*(pointer+i));
-        if((i+1)%16 == 0){
+// 打印数据包
+void print_packet(packet *packet_receive, uint32_t len)
+{
+    printf("数据包结构体大小：%d\n", sizeof(packet));
+    uint8_t *pointer = (uint8_t *)packet_receive;
+    for (int i = 0; i < len; i++)
+    {
+        printf("%02x ", *(pointer + i));
+        if ((i + 1) % 16 == 0)
+        {
             printf("\n");
         }
     }

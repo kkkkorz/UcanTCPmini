@@ -11,7 +11,7 @@ include_directories(
 )
 LINK_DIRECTORIES(${PROJECT_SOURCE_DIR}/lib/npcap/Lib/x64)
 
-add_executable(${PROJECT_NAME}  src/app.c)
+add_executable(${PROJECT_NAME}  src/app.c )
 add_subdirectory(src/tiny_net)
 add_subdirectory(src/net_app)
 add_subdirectory(lib/xnet)

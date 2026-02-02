@@ -23,12 +23,31 @@
  * ..... 更多功能开发中...........
  * 如果你有兴趣的话，请扫仓库中的二维码，或者点击以上面的链接可找到该课程。
  */
+
 #include <stdio.h>
 #include "tiny_net.h"
+#include "ping.h"
+void  net_cmd()
+{
+    while (1)
+    {
+        printf(">");
+        char cmd[1024];
+        scanf("%s", cmd);
+        if (strcmp(cmd, "ping") == 0)
+        {
+            char ip[16];
+            scanf("%s", ip);
+            send_ping(ip);
+        }
+        else
+            continue;
+    }
+}
 int main (void) {
     //初始化协议栈
     net_init();
     net_run();
-
+    net_cmd();
     return 0;
 }
