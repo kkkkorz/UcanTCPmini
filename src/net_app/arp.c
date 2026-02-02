@@ -36,7 +36,7 @@ void arp_process(packet* packet_receive)//解析为ARP数据包
 void arp_reply(packet* packet_receive,arp_packet* arp_packet_receive)//发送ARP数据包
 { 
     //封装数据链路层数据包头
-    packet* packet_reply = malloc(sizeof(arp_packet));
+    packet* packet_reply = malloc(sizeof(packet));
     memcpy(packet_reply->destination_mac,packet_receive->source_mac,6);
     memcpy(packet_reply->source_mac,host_mac,6);
     packet_reply->ether_type = SWAP_UINT16(ARP_TYPE);//设置协议类型为ARP

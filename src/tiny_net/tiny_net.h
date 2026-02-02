@@ -34,8 +34,6 @@ packet* packet_creator(uint32_t size);
 //初始化协议栈
 void net_init();
 
-//设置主机的IP地址和MAC地址
-void net_set_host_info(uint8_t* ip,uint8_t* mac);
 
 //接收数据包
 void net_recv(packet* packet);

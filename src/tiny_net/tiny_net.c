@@ -49,12 +49,6 @@ void net_init()
 
     
 }
-void net_set_host_info(uint8_t* ip,uint8_t* mac){
-     device =  pcap_device_open(ip,mac,0);
-}
-
-
-
 //接收数据包
 void net_recv(){
     packet* packet_receive = malloc(sizeof(packet));
