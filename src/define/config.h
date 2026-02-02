@@ -5,10 +5,12 @@
 #include "packet.h"
 
 //主机的IP地址和MAC地址
-static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
+//static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
+static char* real_host_ip = "10.211.55.3";//模拟一个IP地址
 //0A:00:27:00:00:13
-static uint8_t real_host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
-
+//static uint8_t real_host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
+// 00-1C-42-6E-B5-C4
+static uint8_t real_host_mac[6] = {0x00,0x1c,0x42,0x6e,0xb5,0xc4};
 //模拟一个IP地址和MAC地址
 static uint8_t host_ip_addr[4] = {192,168,254,254};
 static uint8_t host_mac[6] = {0x11,0x22,0x33,0x44,0x55,0x66};

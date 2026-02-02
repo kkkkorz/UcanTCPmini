@@ -25,29 +25,48 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "tiny_net.h"
 #include "ping.h"
-void  net_cmd()
+#include "thread_utils.h"
+
+static void *net_run_thread(void *arg)
 {
+    (void)arg;
+    net_run();
+    return NULL;
+}
+
+static void *net_cmd_thread(void *arg)
+{
+    (void)arg;
     while (1)
     {
         printf(">");
         char cmd[1024];
-        scanf("%s", cmd);
+        if (scanf("%s", cmd) != 1)
+            continue;
         if (strcmp(cmd, "ping") == 0)
         {
             char ip[16];
-            scanf("%s", ip);
-            send_ping(ip);
+            if (scanf("%15s", ip) == 1)
+                send_ping(ip);
         }
-        else
-            continue;
     }
+    return NULL;
 }
-int main (void) {
-    //初始化协议栈
+
+int main(void)
+{
+    // 初始化协议栈
     net_init();
-    net_run();
-    net_cmd();
+
+    thread_create(net_run_thread, NULL);
+    thread_create(net_cmd_thread, NULL);
+
+    // 主线程保持运行
+    while (1)
+        thread_sleep(1);
+
     return 0;
 }
