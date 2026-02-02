@@ -41,7 +41,7 @@ void net_set_host_info(uint8_t* ip,uint8_t* mac);
 void net_recv(packet* packet);
 
 //发送数据包
-void net_send(packet* packet);
+void net_send(packet* packet_send,uint32_t len);
 
 //处理数据包
 void packet_process(packet* packet);

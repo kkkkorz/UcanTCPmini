@@ -28,21 +28,22 @@
 #include "pcap_device.h"
 #include "arp.h"
 #include "config.h"
+#include "util.h"
 
 
 void net_init()
 { 
-    device =  pcap_device_open(host_ip,host_mac,0);//打开网卡的模拟IP地址
+    device =  pcap_device_open(real_host_ip,real_host_mac,0);//打开物理网卡
     if(!device){
         printf("打开网卡失败\n");
     }
     //数据链路层
-    // memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
+    memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
     //网络层
-    arp_packet_template.htype = 1; 
-    arp_packet_template.ptype = 0x0800;
-    arp_packet_template.hlen = 6;
-    arp_packet_template.plen = 4;
+    arp_packet_template.htype =SWAP_UINT16((uint16_t)1);
+    arp_packet_template.ptype = SWAP_UINT16((uint16_t)0x0800);
+    arp_packet_template.hlen = (uint8_t)6;
+    arp_packet_template.plen = (uint8_t)4;
     memcpy(arp_packet_template.sender_mac,host_mac,6);
     memcpy(arp_packet_template.sender_ip,host_ip_addr,4);
 
@@ -60,8 +61,8 @@ void net_recv(){
     uint32_t len = pcap_device_read(device, packet_receive, sizeof(packet));
     // print_packet(packet_receive,len);
     if(len > 0){
-          print_packet(packet_receive,len);
-      //  packet_process(packet_receive);
+         // print_packet(packet_receive,len);
+          packet_process(packet_receive);
     }
     else if(len < 0){
         printf("接收数据包出错\n");
@@ -70,9 +71,10 @@ void net_recv(){
 }
 
 //发送数据包
-void net_send(packet* packet_send){
-  uint32_t res =  pcap_device_send(device,packet_send->data,sizeof(packet));
-  if(res > 0){
+void net_send(packet* packet_send,uint32_t len){
+
+  uint32_t res =  pcap_device_send(device,packet_send,len);
+  if(res >= 0){
       printf("发送数据包成功\n");
   }
   else{
@@ -85,13 +87,15 @@ void net_send(packet* packet_send){
 void packet_process(packet* packet_receive){
     //判断数据包类型
     uint16_t type = packet_receive->ether_type;
+    type = SWAP_UINT16(type);
+    printf("数据包类型：%d\n",type);
     switch (type)
     {
     case ARP_TYPE:
         arp_process(packet_receive);
         break;
     case IP_TYPE:
-        arp_process(packet_receive);
+        //arp_process(packet_receive);
         break;
     default:
         break;
@@ -103,12 +107,12 @@ void packet_process(packet* packet_receive){
 void net_run(){
     while(1){
         net_recv();
+        Sleep(10);
     }
 }
 
 //打印数据包
 void print_packet(packet* packet_receive,uint32_t len){
-    printf("接收数据包：%d\n",len);
     printf("数据包结构体大小：%d\n",sizeof(packet));
     uint8_t* pointer = (uint8_t*)packet_receive;
     for(int i = 0;i < len;i++){

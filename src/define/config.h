@@ -4,10 +4,13 @@
 #include "pcap/pcap.h"
 #include "packet.h"
 //主机的IP地址和MAC地址
-static char* host_ip = "192.168.254.1";//模拟一个IP地址
-static uint8_t host_ip_addr[4] = {192,168,254,1};
+static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
 //0A:00:27:00:00:13
-static uint8_t host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
+static uint8_t real_host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
+
+//模拟一个IP地址和MAC地址
+static uint8_t host_ip_addr[4] = {192,168,254,254};
+static uint8_t host_mac[6] = {0x11,0x22,0x33,0x44,0x55,0x66};
 //设备控制器
 static pcap_t* device = NULL;
 //数据包默认大小
@@ -15,6 +18,11 @@ static unsigned int packet_default_size = 2048;
 //packet 模板
 static packet packet_template;
 static arp_packet arp_packet_template;
+#define HTYPE 1
+#define PTYPE  0x0800
+#define HLEN 6
+#define PLEN 4
+
 //0806 ARP
 #define ARP_TYPE  0x0806
 //0800 IP
