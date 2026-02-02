@@ -50,7 +50,7 @@ void packet_process(packet* packet);
 void net_run();
 
 //打印数据包
-void print_packet(packet* packet);
+void print_packet(packet* packet_receive,uint32_t len);
 
 
 #endif // XNET_TINY_H

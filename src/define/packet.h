@@ -10,8 +10,8 @@ typedef struct packet
     uint8_t destination_mac[6];//目的MAC地址
     uint8_t source_mac[6];//源MAC地址
     uint16_t ether_type;//协议类型
-    
-    uint8_t data[512];//数据
+
+    uint8_t data[1518];//数据
 }packet;
 typedef struct arp_packet
 {

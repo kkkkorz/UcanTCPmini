@@ -37,7 +37,7 @@ void net_init()
         printf("打开网卡失败\n");
     }
     //数据链路层
-    memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
+    // memcpy(packet_template.source_mac,host_mac,6);//填充源MAC地址
     //网络层
     arp_packet_template.htype = 1; 
     arp_packet_template.ptype = 0x0800;
@@ -56,18 +56,17 @@ void net_set_host_info(uint8_t* ip,uint8_t* mac){
 
 //接收数据包
 void net_recv(){
-    packet* packet_receive =  malloc(sizeof(packet));
-    uint32_t len = pcap_device_read(device,packet_receive,sizeof(packet));
+    packet* packet_receive = malloc(sizeof(packet));
+    uint32_t len = pcap_device_read(device, packet_receive, sizeof(packet));
+    // print_packet(packet_receive,len);
     if(len > 0){
-        print_packet(packet_receive);
-        packet_process(packet_receive);//给协议栈解析处理
+          print_packet(packet_receive,len);
+      //  packet_process(packet_receive);
     }
-    else if(len != 0){
+    else if(len < 0){
         printf("接收数据包出错\n");
     }
     free(packet_receive);
-    
-
 }
 
 //发送数据包
@@ -85,7 +84,6 @@ void net_send(packet* packet_send){
 //处理数据包
 void packet_process(packet* packet_receive){
     //判断数据包类型
-    print_packet(packet_receive);
     uint16_t type = packet_receive->ether_type;
     switch (type)
     {
@@ -109,10 +107,12 @@ void net_run(){
 }
 
 //打印数据包
-void print_packet(packet* packet_receive){
-    printf("接收数据包：\n");
-    for(int i = 0;i < sizeof(packet);i++){
-        printf("%02x ",*(packet_receive+i));
+void print_packet(packet* packet_receive,uint32_t len){
+    printf("接收数据包：%d\n",len);
+    printf("数据包结构体大小：%d\n",sizeof(packet));
+    uint8_t* pointer = (uint8_t*)packet_receive;
+    for(int i = 0;i < len;i++){
+        printf("%02x ",*(pointer+i));
         if((i+1)%16 == 0){
             printf("\n");
         }

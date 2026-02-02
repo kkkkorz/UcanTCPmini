@@ -7,7 +7,7 @@
 static char* host_ip = "192.168.254.1";//模拟一个IP地址
 static uint8_t host_ip_addr[4] = {192,168,254,1};
 //0A:00:27:00:00:13
-static uint8_t host_mac[6] = {0xFF,0x00,0x00,0x00,0x00,0x00};
+static uint8_t host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
 //设备控制器
 static pcap_t* device = NULL;
 //数据包默认大小
