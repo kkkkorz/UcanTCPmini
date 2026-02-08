@@ -127,16 +127,16 @@ uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
     arp_packet *arp_packet_request = (arp_packet *)packet_request->data;//获取ARP数据包结构体
 
     arp_packet_request->hlen = HLEN;
-    arp_packet_request->htype = HTYPE;
+    arp_packet_request->htype = SWAP_UINT16(HTYPE);
     arp_packet_request->plen = PLEN;
-    arp_packet_request->ptype = PTYPE;
-    arp_packet_request->operation = ARP_OP_REQUEST;//int赋值给uint16_t
-    SWAP_UINT16(arp_packet_request->operation);//改变字节序
+    arp_packet_request->ptype = SWAP_UINT16(PTYPE);
+    arp_packet_request->operation = SWAP_UINT16(ARP_OP_REQUEST);//int赋值给uint16_t
+    //SWAP_UINT16(arp_packet_request->operation);//改变字节序
     memcpy(arp_packet_request->sender_mac, host_mac, 6);//源MAC地址
     memcpy(arp_packet_request->sender_ip, host_ip_addr, 4);//源IP地址
     memcpy(arp_packet_request->target_mac, broadcast_mac, 6);//目标MAC地址
     memcpy(arp_packet_request->target_ip, ip, 4);//目标IP地址
-    net_data_send(arp_packet_request, broadcast_mac, host_mac, ARP_TYPE, sizeof(arp_packet_request));//向下传递
+    net_data_send(arp_packet_request, broadcast_mac, host_mac, ARP_TYPE, sizeof(arp_packet));//向下传递
     free(packet_request);
     
 }

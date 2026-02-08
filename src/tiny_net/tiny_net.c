@@ -87,8 +87,7 @@ void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source
     // 这里增加数据链路层的包头
     memcpy(packet_send->destination_mac, destination, 6);
     memcpy(packet_send->source_mac, source, 6);
-    packet_send->ether_type = ether_type;
-    SWAP_UINT16(packet_send->ether_type);//处理UINT16
+    packet_send->ether_type =SWAP_UINT16(ether_type);//处理UINT16
     // 连接数据
     memcpy(packet_send->data, up_packet_send, len);
     uint32_t res = pcap_device_send(device, packet_send, len + 14); // 14是数据链路层头

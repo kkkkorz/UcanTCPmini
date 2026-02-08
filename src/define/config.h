@@ -6,7 +6,7 @@
 
 //主机的IP地址和MAC地址
 //static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
-static char* real_host_ip = "10.211.55.3";//模拟一个IP地址
+static char* real_host_ip = "192.168.254.1";
 //0A:00:27:00:00:13
 //static uint8_t real_host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
 // 00-1C-42-6E-B5-C4

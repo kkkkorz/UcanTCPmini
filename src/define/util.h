@@ -19,5 +19,17 @@ uint32_t bytes_to_uint32(uint8_t* bytes);
 //将数字转为ip地址
 #define UINT32_TO_IP(ip,num) ip[0] = (num >> 24) & 0xff; ip[1] = ()
 
+//将点分十进制的ip字符串转为uint8_t数组
+inline uint8_t*   ip_str_to_uint8(char* ip_str){
+    uint8_t* ip = malloc(4);
+    char* token = strtok(ip_str,".");
+    int i = 0;
+    while(token != NULL){
+        ip[i] = atoi(token);
+        token = strtok(NULL,".");
+        i++;
+    }
+    return ip;
+}
 
 #endif

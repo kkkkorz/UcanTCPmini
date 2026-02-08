@@ -29,7 +29,6 @@
 #include "tiny_net.h"
 #include "ping.h"
 #include "thread_utils.h"
-
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -49,6 +48,7 @@ static void *net_cmd_thread(void *arg)
         if (strcmp(cmd, "ping") == 0)
         {
             char ip[16];
+
             if (scanf("%15s", ip) == 1)
                 send_ping(ip);
         }
