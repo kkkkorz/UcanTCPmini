@@ -17,6 +17,8 @@ void arp_insert(uint8_t *ip, uint8_t *mac)
         memcpy(arp_cache[index].ip, ip, 4);
         memcpy(arp_cache[index].mac, mac, 6);
         arp_cache[index].time = time(NULL);
+        arp_cache[index].valid = 1;
+
     }
     else // 冲突
     {
@@ -78,11 +80,11 @@ void arp_process(packet *packet_receive) // 解析为ARP数据包
 
         if (operation == ARP_OP_REQUEST)// ARP请求
         { 
-            // 发送ARP应答
+            // 处理ARP请求：发送ARP应答
             arp_reply(packet_receive, arp);
         }
         else if (operation == ARP_OP_REPLY)
-        { // ARP应答
+        {  // 处理ARP应答
             arp_process_reply(packet_receive);
         }
     }
@@ -138,15 +140,16 @@ uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
     memcpy(arp_packet_request->target_ip, ip, 4);//目标IP地址
     net_data_send(arp_packet_request, broadcast_mac, host_mac, ARP_TYPE, sizeof(arp_packet));//向下传递
     free(packet_request);
+    //开始计时
+    time_t start = time(NULL);
+    time_t now = start;
+    while (now - start < 1000) // 等待arp表更新，这里是否合适？
+    {
+       uint8_t* dest_mac =  get_mac_by_ip(ip);
+       if(dest_mac != NULL) return dest_mac;
+       now = time(NULL);
+    }
+    return NULL;
     
-}
-void arp_print(arp_packet *arp)
-{
-    printf("ARP: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", arp->sender_mac[0], arp->sender_mac[1], arp->sender_mac[2], arp->sender_mac[3], arp->sender_mac[4], arp->sender_mac[5], arp->sender_mac[6], arp->sender_mac[7], arp->sender_mac[8]);
-    printf("ARP: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", arp->target_mac[0], arp->target_mac[1], arp->target_mac[2], arp->target_mac[3], arp->target_mac[4], arp->target_mac[5], arp->target_mac[6], arp->target_mac[7], arp->target_mac[8]);
-    printf("ARP: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", arp->sender_ip[0], arp->sender_ip[1], arp->sender_ip[2], arp->sender_ip[3], arp->target_ip[0], arp->target_ip[1], arp->target_ip[2], arp->target_ip[3]);
-    printf("ARP: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", arp->target_ip[0], arp->target_ip[1], arp->target_ip[2], arp->target_ip[3]);
-    printf("ARP: %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x %x\n", arp->htype, arp->ptype, arp->hlen, arp->plen, arp->operation);
-    printf("\n");
-    return;
+    
 }

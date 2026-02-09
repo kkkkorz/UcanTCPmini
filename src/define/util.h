@@ -31,5 +31,8 @@ inline uint8_t*   ip_str_to_uint8(char* ip_str){
     }
     return ip;
 }
+//校验ip地址是否合法
+
+//校验mac地址是否合法
 
 #endif

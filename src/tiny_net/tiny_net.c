@@ -32,7 +32,7 @@
 
 void net_init()
 {
-    device = pcap_device_open(real_host_ip, real_host_mac, 0); // 打开物理网卡
+    device = pcap_device_open(real_host_ip, host_mac, 0); // 打开物理网卡
     if (!device)
     {
         printf("打开网卡失败\n");
@@ -126,7 +126,6 @@ void net_run()
     while (1)
     {
         net_recv();
-        Sleep(10);
     }
 }
 

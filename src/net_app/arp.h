@@ -5,18 +5,16 @@
 #include "tiny_net.h"
 #include "config.h"
 
-// ARP数据包结构体
+
 void arp_init();
 void arp_process(packet *packet);                                       // 解析为ARP数据包
 void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive); // 回应ARP数据包
 uint8_t *arp_request(uint8_t *ip, uint8_t *mac);                        // 发送ARP请求
-// 打印arp数据包
-void arp_print(arp_packet *arp);
-void arp_insert(uint8_t *ip, uint8_t *mac);
-uint8_t *get_mac_by_ip(uint8_t *ip);
-void clear_arp_table();
-void write_arp_table(uint8_t *ip, uint8_t *mac, uint32_t index);
-void arp_process_reply(packet *packet_receive);
+void arp_insert(uint8_t *ip, uint8_t *mac);                             // 插入ARP缓存表
+uint8_t *get_mac_by_ip(uint8_t *ip);                                    // 通过ip地址获取mac地址
+void clear_arp_table();                                                 // 清空ARP缓存表
+void write_arp_table(uint8_t *ip, uint8_t *mac, uint32_t index);        // 写入ARP缓存表
+void arp_process_reply(packet *packet_receive);                         // 处理ARP应答
 
 #pragma pack(1)
 // ARP缓存表
