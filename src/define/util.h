@@ -20,8 +20,7 @@ uint32_t bytes_to_uint32(uint8_t* bytes);
 #define UINT32_TO_IP(ip,num) ip[0] = (num >> 24) & 0xff; ip[1] = ()
 
 //将点分十进制的ip字符串转为uint8_t数组
-inline uint8_t*   ip_str_to_uint8(char* ip_str){
-    uint8_t* ip = malloc(4);
+inline void   ip_str_to_uint8(uint8_t* ip,char* ip_str){
     char* token = strtok(ip_str,".");
     int i = 0;
     while(token != NULL){
@@ -29,10 +28,38 @@ inline uint8_t*   ip_str_to_uint8(char* ip_str){
         token = strtok(NULL,".");
         i++;
     }
-    return ip;
+    return;
 }
 //校验ip地址是否合法
 
 //校验mac地址是否合法
+
+
+//计算校验和
+ inline uint16_t  calculate_checksum(uint16_t *addr, int count) {
+    uint32_t sum = 0;
+    uint16_t *ptr = addr;
+    // 将所有 16 位字相加
+    while (count > 1) {
+        sum += *ptr++;
+        count -= 2;
+    }
+
+    // 处理可能的最后一个字节（如果总字节数为奇数）
+    if (count > 0) {
+        sum += *(uint8_t *)ptr; // 将最后一个字节视为高8位，低8位为0
+    }
+
+    // 将进位加到低16位
+    while (sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
+    // 返回反码
+    return (uint16_t)(~sum);
+}
+
+
+
 
 #endif

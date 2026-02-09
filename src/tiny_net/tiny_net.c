@@ -27,12 +27,13 @@
 #include "tiny_net.h"
 #include "pcap_device.h"
 #include "arp.h"
+#include "ip.h"
 #include "config.h"
 #include "util.h"
 
 void net_init()
 {
-    device = pcap_device_open(real_host_ip, host_mac, 0); // 打开物理网卡
+    device = pcap_device_open(real_host_ip,host_mac, 1); // 打开物理网卡
     if (!device)
     {
         printf("打开网卡失败\n");
@@ -114,7 +115,7 @@ void packet_process(packet *packet_receive)
         arp_process(packet_receive);
         break;
     case IP_TYPE:
-        // arp_process(packet_receive);
+        ip_process(packet_receive);
         break;
     default:
         break;

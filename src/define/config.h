@@ -37,4 +37,15 @@ static arp_packet arp_packet_template;
 //APR 操作类型
 #define ARP_OP_REQUEST  1
 #define ARP_OP_REPLY  2
+//IP 协议类型
+#define ICMP_TYPE  1
+#define IPV4  4
+
+
+//ICMP 类型
+#define ICMP_ECHO_REQUEST  8
+#define ICMP_ECHO_REPLY  0
+
+
+
 #endif

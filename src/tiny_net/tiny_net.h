@@ -41,6 +41,9 @@ void net_recv(packet* packet);
 //发送数据包
 void net_send(packet* packet_send,uint32_t len);
 
+//数据链路层发送，上层调用无需关心数据包头
+void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len);
+
 //处理数据包
 void packet_process(packet* packet);
 

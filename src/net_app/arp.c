@@ -111,7 +111,7 @@ void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送
     memcpy(arp->target_mac, packet_receive->source_mac, 6);   // 设置目标方MAC地址为发送方MAC地址
     memcpy(arp->target_ip, arp_packet_receive->sender_ip, 4); // 设置目标方IP地址为发送方IP地址
     // 更新缓存表
-    arp_insert(arp->sender_ip, arp->sender_mac);
+    arp_insert(arp_packet_receive->sender_ip, packet_receive->source_mac);
 
     // 将ARP数据包写入数据包
     memcpy(packet_reply->data, arp, sizeof(arp_packet));
