@@ -30,7 +30,8 @@ void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //I
     ip_packet_send->protocol = protocol;
     memcpy(ip_packet_send->source_ip, host_ip_addr, 4);
     memcpy(ip_packet_send->destination_ip, dest_ip, 4);
-    ip_packet_send->checksum = SWAP_UINT16(0x1234);
+    ip_packet_send->checksum = 0;
+    ip_packet_send->checksum = calculate_checksum(ip_packet_send, sizeof(ip_packet));
     //ip_packet_send->checksum = SWAP_UINT16(checksum(ip_packet_send, sizeof(ip_packet) + ip_packet_send->header_len * 4));
     //拼接data
     memcpy(ip_packet_send + 1, data, len);
