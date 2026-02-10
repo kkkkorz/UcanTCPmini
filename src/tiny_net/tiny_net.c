@@ -30,7 +30,8 @@
 #include "ip.h"
 #include "config.h"
 #include "util.h"
-
+packet_node* packet_queue[PACKET_QUEUE_SIZE];//队列
+int  packet_queue_index = -1;//队尾
 void net_init()
 {
     device = pcap_device_open(real_host_ip,host_mac, 1); // 打开物理网卡
@@ -47,6 +48,8 @@ void net_init()
     arp_packet_template.plen = (uint8_t)4;
     memcpy(arp_packet_template.sender_mac, host_mac, 6);
     memcpy(arp_packet_template.sender_ip, host_ip_addr, 4);
+
+
 }
 // 接收数据包
 void net_recv()
@@ -56,7 +59,8 @@ void net_recv()
     // print_packet(packet_receive,len);
     if (len > 0)
     {
-        // print_packet(packet_receive,len);
+        printf("接收数据包成功\n");
+        print_packet(packet_receive,len);
         packet_process(packet_receive);
     }
     else if (len < 0)
@@ -91,15 +95,12 @@ void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source
     packet_send->ether_type =SWAP_UINT16(ether_type);//处理UINT16
     // 连接数据
     memcpy(packet_send->data, up_packet_send, len);
-    uint32_t res = pcap_device_send(device, packet_send, len + 14); // 14是数据链路层头
-    if (res >= 0)
-    {
-        printf("发送数据包成功\n");
-    }
-    else
-    {
-        printf("发送数据包失败\n");
-    }
+    //封装为消息队列的节点
+    packet_node* packet_send_node = (packet_node*)malloc(sizeof(packet_node));
+    memcpy(packet_send_node, packet_send, len+14);
+    packet_send_node->len = len+14;
+    packet_queue[++packet_queue_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_index] = packet_send_node;
+    free(packet_send);
 }
 
 // 处理数据包
@@ -127,6 +128,7 @@ void net_run()
     while (1)
     {
         net_recv();
+
     }
 }
 
@@ -144,4 +146,15 @@ void print_packet(packet *packet_receive, uint32_t len)
         }
     }
     printf("\n");
+}
+void send_packet(packet_node* packet_node){
+    uint32_t res = pcap_device_send(device, (uint8_t*)packet_node, packet_node->len);
+    if (res >= 0)
+    {
+        printf("发送数据包成功\n");
+    }
+    else
+    {
+        printf("发送数据包失败\n");
+    }
 }

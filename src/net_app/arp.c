@@ -120,7 +120,7 @@ void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送
     free(packet_reply);
 }
 void arp_process_reply(packet* packet_receive){
-    arp_packet *arp = (arp_packet *)packet_receive->data;//取出ARP数据包
+    arp_packet *arp = (arp_packet *)(packet_receive->data);//取出ARP数据包
     arp_insert(arp->sender_ip, arp->sender_mac);//更新缓存表
 }
 //发送ARP请求
@@ -140,16 +140,6 @@ uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
     memcpy(arp_packet_request->target_ip, ip, 4);//目标IP地址
     net_data_send(arp_packet_request, broadcast_mac, host_mac, ARP_TYPE, sizeof(arp_packet));//向下传递
     free(packet_request);
-    //开始计时
-    time_t start = time(NULL);
-    time_t now = start;
-    while (now - start < 1000) // 等待arp表更新，这里是否合适？
-    {
-       uint8_t* dest_mac =  get_mac_by_ip(ip);
-       if(dest_mac != NULL) return dest_mac;
-       now = time(NULL);
-    }
     return NULL;
-    
     
 }

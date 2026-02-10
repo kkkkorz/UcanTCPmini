@@ -13,6 +13,16 @@ typedef struct packet
 
     uint8_t data[2048];//数据
 }packet;
+typedef struct packet_node
+{
+    //Ethernet帧头
+    uint8_t destination_mac[6];//目的MAC地址
+    uint8_t source_mac[6];//源MAC地址
+    uint16_t ether_type;//协议类型
+
+    uint8_t data[2048];//数据
+    uint32_t len;
+}packet_node;
 typedef struct arp_packet
 {
     uint16_t htype;//硬件类型

@@ -21,7 +21,7 @@ void ip_process(packet* packet_receive){
 void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //IP层发送数据包
     ip_packet* ip_packet_send = malloc(sizeof(ip_packet)+len);
     //添加头部01000101
-    ip_packet_send->header_len = 69;
+    ip_packet_send->header_len = 0x45;
     ip_packet_send->service_type = 0;//？？
     ip_packet_send->total_len = SWAP_UINT16(sizeof(ip_packet) + sizeof(icmp_packet));
     ip_packet_send->identification = SWAP_UINT16(0x1234);//？？
@@ -35,6 +35,21 @@ void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //I
     //ip_packet_send->checksum = SWAP_UINT16(checksum(ip_packet_send, sizeof(ip_packet) + ip_packet_send->header_len * 4));
     //拼接data
     memcpy(ip_packet_send + 1, data, len);
-    net_data_send(ip_packet_send, get_mac_by_ip(dest_ip),host_mac, IP_TYPE, len + sizeof(ip_packet));//向下传递
+    uint8_t* dest_mac = get_mac_by_ip(dest_ip);
+    if(dest_mac == NULL){
+       arp_request(dest_ip, NULL);
+       //等待arp请求完成
+       uint32_t wait_time = 0;
+       while(get_mac_by_ip(dest_ip) == NULL){
+           Sleep(100);
+           wait_time+= 100;
+           if(wait_time > 1000){
+               printf("Timeout when arp\n");
+               return;
+           }
+       }
+       dest_mac = get_mac_by_ip(dest_ip);
+    }
+    net_data_send(ip_packet_send, dest_mac,host_mac, IP_TYPE, len + sizeof(ip_packet));//向下传递
     free(ip_packet_send);
 }

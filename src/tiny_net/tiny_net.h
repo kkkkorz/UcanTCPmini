@@ -41,7 +41,7 @@ void net_recv(packet* packet);
 //发送数据包
 void net_send(packet* packet_send,uint32_t len);
 
-//数据链路层发送，上层调用无需关心数据包头
+//添加数据链路层包头，将要发送的数据包添加到消息队列
 void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len);
 
 //处理数据包
@@ -53,6 +53,7 @@ void net_run();
 //打印数据包
 void print_packet(packet* packet_receive,uint32_t len);
 
-
+//发送数据包
+void send_packet(packet_node* packet_node);
 #endif // XNET_TINY_H
 
