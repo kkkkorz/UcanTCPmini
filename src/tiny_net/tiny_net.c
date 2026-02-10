@@ -53,12 +53,14 @@ void net_recv()
     if (len > 0)
     {
         packet_queue_receive[++packet_queue_receive_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = packet_receive;
+        return;
         printf("接收数据包成功\n");
     }
     else if (len < 0)
     {
         printf("接收数据包出错\n");
     }
+    free(packet_receive);
 }
 
 
@@ -98,6 +100,7 @@ void packet_process(packet *packet_receive)
     default:
         break;
     }
+    free(packet_receive);
 }
 
 // 打印数据包

@@ -32,7 +32,6 @@ void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //I
     memcpy(ip_packet_send->destination_ip, dest_ip, 4);
     ip_packet_send->checksum = 0;
     ip_packet_send->checksum = calculate_checksum(ip_packet_send, sizeof(ip_packet));
-    //ip_packet_send->checksum = SWAP_UINT16(checksum(ip_packet_send, sizeof(ip_packet) + ip_packet_send->header_len * 4));
     //拼接data
     memcpy(ip_packet_send + 1, data, len);
     uint8_t* dest_mac = get_mac_by_ip(dest_ip);
@@ -41,8 +40,8 @@ void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //I
        //等待arp请求完成
        uint32_t wait_time = 0;
        while(get_mac_by_ip(dest_ip) == NULL){
-           Sleep(100);
-           wait_time+= 100;
+           Sleep(10);
+           wait_time+= 10;
            if(wait_time > 1000){
                printf("Timeout when arp\n");
                return;

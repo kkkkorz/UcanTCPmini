@@ -61,7 +61,7 @@ static void *net_send_thread(void *arg) //发送数据包的线程
     (void)arg;
     while (1)
     {
-        //一直取队列中的数据包发送出去
+        //轮询队列中的数据包发送出去
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
             if(packet_queue_send[i] != NULL){
                 send_packet(packet_queue_send[i]);
@@ -69,6 +69,7 @@ static void *net_send_thread(void *arg) //发送数据包的线程
                 packet_queue_send[i] = NULL;
             }
         }
+        Sleep(1);
         
     }
     return NULL;
@@ -82,11 +83,11 @@ static void *net_process_thread(void *arg) //处理数据包的线程
         //一直取队列中的数据包处理
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
             if(packet_queue_receive[i] != NULL){
-                packet_process(packet_queue_receive[i]);
-                free(packet_queue_receive[i]);
+                thread_create(packet_process, packet_queue_receive[i]);//创建一个线程处理数据包，防止阻塞（例如处理过程中需要arp请求，形成类似于死锁）
                 packet_queue_receive[i] = NULL;
             }
         }
+        Sleep(1);
         
     }
     return NULL;
