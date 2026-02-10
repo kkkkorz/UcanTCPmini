@@ -38,10 +38,7 @@ void net_init();
 //接收数据包
 void net_recv(packet* packet);
 
-//发送数据包
-void net_send(packet* packet_send,uint32_t len);
-
-//添加数据链路层包头，将要发送的数据包添加到消息队列
+//添加数据链路层包头
 void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len);
 
 //处理数据包

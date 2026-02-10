@@ -20,13 +20,13 @@ static pcap_t* device = NULL;
 static unsigned int packet_default_size = 2048;
 //广播地址
 static uint8_t broadcast_mac[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
-//packet 模板
-static packet packet_template;
-static arp_packet arp_packet_template;
 //消息队列 暂时使用轮询
 #define PACKET_QUEUE_SIZE 100
-extern  packet_node* packet_queue[PACKET_QUEUE_SIZE];
-extern  int  packet_queue_index;//队尾
+extern  packet_node* packet_queue_send[PACKET_QUEUE_SIZE];
+extern  int  packet_queue_send_index;//队尾
+
+extern  packet* packet_queue_receive[PACKET_QUEUE_SIZE];
+extern  int  packet_queue_receive_index;//队尾
 
 
 

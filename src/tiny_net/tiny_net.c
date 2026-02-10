@@ -30,8 +30,12 @@
 #include "ip.h"
 #include "config.h"
 #include "util.h"
-packet_node* packet_queue[PACKET_QUEUE_SIZE];//队列
-int  packet_queue_index = -1;//队尾
+packet_node* packet_queue_send[PACKET_QUEUE_SIZE];//发送队列
+int  packet_queue_send_index = -1;//队尾
+
+packet* packet_queue_receive[PACKET_QUEUE_SIZE];//接收队列
+int packet_queue_receive_index = -1;//队尾
+
 void net_init()
 {
     device = pcap_device_open(real_host_ip,host_mac, 1); // 打开物理网卡
@@ -39,17 +43,6 @@ void net_init()
     {
         printf("打开网卡失败\n");
     }
-    // 数据链路层
-    memcpy(packet_template.source_mac, host_mac, 6); // 填充源MAC地址
-    // 网络层
-    arp_packet_template.htype = SWAP_UINT16((uint16_t)1);
-    arp_packet_template.ptype = SWAP_UINT16((uint16_t)0x0800);
-    arp_packet_template.hlen = (uint8_t)6;
-    arp_packet_template.plen = (uint8_t)4;
-    memcpy(arp_packet_template.sender_mac, host_mac, 6);
-    memcpy(arp_packet_template.sender_ip, host_ip_addr, 4);
-
-
 }
 // 接收数据包
 void net_recv()
@@ -59,31 +52,15 @@ void net_recv()
     // print_packet(packet_receive,len);
     if (len > 0)
     {
+        packet_queue_receive[++packet_queue_receive_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = packet_receive;
         printf("接收数据包成功\n");
-        print_packet(packet_receive,len);
-        packet_process(packet_receive);
     }
     else if (len < 0)
     {
         printf("接收数据包出错\n");
     }
-    free(packet_receive);
 }
 
-// 发送数据包
-void net_send(packet *packet_send, uint32_t len)
-{
-
-    uint32_t res = pcap_device_send(device, packet_send, len);
-    if (res >= 0)
-    {
-        printf("发送数据包成功\n");
-    }
-    else
-    {
-        printf("发送数据包失败\n");
-    }
-}
 
 // 数据链路层发送，上层调用无需关心数据包头
 void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len)
@@ -99,7 +76,7 @@ void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source
     packet_node* packet_send_node = (packet_node*)malloc(sizeof(packet_node));
     memcpy(packet_send_node, packet_send, len+14);
     packet_send_node->len = len+14;
-    packet_queue[++packet_queue_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_index] = packet_send_node;
+    packet_queue_send[++packet_queue_send_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_send_index] = packet_send_node;
     free(packet_send);
 }
 
@@ -120,15 +97,6 @@ void packet_process(packet *packet_receive)
         break;
     default:
         break;
-    }
-}
-// 持续运行
-void net_run()
-{
-    while (1)
-    {
-        net_recv();
-
     }
 }
 
@@ -156,5 +124,13 @@ void send_packet(packet_node* packet_node){
     else
     {
         printf("发送数据包失败\n");
+    }
+}
+// 持续运行
+void net_run()
+{
+    while (1)
+    {
+        net_recv();
     }
 }

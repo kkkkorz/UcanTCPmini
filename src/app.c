@@ -63,10 +63,10 @@ static void *net_send_thread(void *arg) //发送数据包的线程
     {
         //一直取队列中的数据包发送出去
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
-            if(packet_queue[i] != NULL){
-                send_packet(packet_queue[i]);
-                free(packet_queue[i]);
-                packet_queue[i] = NULL;
+            if(packet_queue_send[i] != NULL){
+                send_packet(packet_queue_send[i]);
+                free(packet_queue_send[i]);
+                packet_queue_send[i] = NULL;
             }
         }
         
@@ -81,10 +81,10 @@ static void *net_process_thread(void *arg) //处理数据包的线程
     {
         //一直取队列中的数据包处理
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
-            if(packet_queue[i] != NULL){
-                net_process(packet_queue[i]);
-                free(packet_queue[i]);
-                packet_queue[i] = NULL;
+            if(packet_queue_receive[i] != NULL){
+                packet_process(packet_queue_receive[i]);
+                free(packet_queue_receive[i]);
+                packet_queue_receive[i] = NULL;
             }
         }
         
@@ -101,6 +101,7 @@ int main(void)
     thread_create(net_run_thread, NULL);
     thread_create(net_cmd_thread, NULL);
     thread_create(net_send_thread, NULL);
+    thread_create(net_process_thread, NULL);
 
     // 主线程保持运行
     while (1)

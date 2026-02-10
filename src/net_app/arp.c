@@ -93,11 +93,6 @@ void arp_process(packet *packet_receive) // 解析为ARP数据包
 
 void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送ARP数据包
 {
-    // 封装数据链路层数据包头
-    packet *packet_reply = malloc(sizeof(packet));
-    memcpy(packet_reply->destination_mac, packet_receive->source_mac, 6);
-    memcpy(packet_reply->source_mac, host_mac, 6);
-    packet_reply->ether_type = SWAP_UINT16(ARP_TYPE); // 设置协议类型为ARP
 
     // 封装ARP数据包
     arp_packet *arp = (arp_packet *)malloc(sizeof(arp_packet));
@@ -113,11 +108,8 @@ void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送
     // 更新缓存表
     arp_insert(arp_packet_receive->sender_ip, packet_receive->source_mac);
 
-    // 将ARP数据包写入数据包
-    memcpy(packet_reply->data, arp, sizeof(arp_packet));
-    net_send(packet_reply, 14 + sizeof(arp_packet)); // 发送数据包 长度为帧头加ARP数据包大小
+    net_data_send(arp, arp->target_mac,host_mac, ARP_TYPE, sizeof(arp_packet));
     free(arp);
-    free(packet_reply);
 }
 void arp_process_reply(packet* packet_receive){
     arp_packet *arp = (arp_packet *)(packet_receive->data);//取出ARP数据包
@@ -133,7 +125,6 @@ uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
     arp_packet_request->plen = PLEN;
     arp_packet_request->ptype = SWAP_UINT16(PTYPE);
     arp_packet_request->operation = SWAP_UINT16(ARP_OP_REQUEST);//int赋值给uint16_t
-    //SWAP_UINT16(arp_packet_request->operation);//改变字节序
     memcpy(arp_packet_request->sender_mac, host_mac, 6);//源MAC地址
     memcpy(arp_packet_request->sender_ip, host_ip_addr, 4);//源IP地址
     memcpy(arp_packet_request->target_mac, broadcast_mac, 6);//目标MAC地址
