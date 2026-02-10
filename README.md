@@ -246,15 +246,23 @@ static void *net_process_thread(void *arg) {
 
 **问题**：第一次ping回复总是发不出去，需要先"预热"一下ARP表。
 
-**解决**：从经过的IP和ARP数据包中"偷取"MAC地址信息。
+**解决**：从经过的IP数据包中"偷取"MAC地址信息。
 
 ```c
-// 处理ARP时顺便更新缓存
-void arp_process(packet *packet_receive) {
-    arp_packet *arp = (arp_packet *)packet_receive->data;
-    // 不管是请求还是应答，都更新缓存
-    arp_insert(arp->sender_ip, packet_receive->source_mac);
-    ...
+void ip_process(packet* packet_receive){
+    ip_packet* ip_packet_receive = (ip_packet*)packet_receive->data;//获取ip数据包结构体
+    uint8_t prpotocol = ip_packet_receive->protocol;
+    //白嫖arp缓存
+    arp_insert(ip_packet_receive->source_ip, packet_receive->source_mac);
+    switch (prpotocol)
+    {
+    case ICMP_TYPE: // ICMP
+        icmp_process(packet_receive);
+        break;
+    
+    default:
+        break;
+    }
 }
 ```
 
