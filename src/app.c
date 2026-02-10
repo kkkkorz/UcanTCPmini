@@ -83,7 +83,8 @@ static void *net_process_thread(void *arg) //处理数据包的线程
         //一直取队列中的数据包处理
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
             if(packet_queue_receive[i] != NULL){
-                thread_create(packet_process, packet_queue_receive[i]);//创建一个线程处理数据包，防止阻塞（例如处理过程中需要arp请求，形成类似于死锁）
+                packet_process(packet_queue_receive[i]);
+                free(packet_queue_receive[i]);
                 packet_queue_receive[i] = NULL;
             }
         }

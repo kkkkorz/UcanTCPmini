@@ -100,7 +100,6 @@ void packet_process(packet *packet_receive)
     default:
         break;
     }
-    free(packet_receive);
 }
 
 // 打印数据包

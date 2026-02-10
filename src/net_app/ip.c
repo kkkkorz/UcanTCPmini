@@ -7,6 +7,8 @@
 void ip_process(packet* packet_receive){
     ip_packet* ip_packet_receive = (ip_packet*)packet_receive->data;//获取ip数据包结构体
     uint8_t prpotocol = ip_packet_receive->protocol;
+    //白嫖arp缓存
+    arp_insert(ip_packet_receive->source_ip, packet_receive->source_mac);
     switch (prpotocol)
     {
     case ICMP_TYPE: // ICMP
