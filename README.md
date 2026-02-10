@@ -337,7 +337,7 @@ void ip_str_to_uint8(uint8_t* ip, char* ip_str){
 
 一个正在努力提升自己的研二学生，希望通过手写TCP/IP协议栈来夯实计算机网络基础。
 
-**项目地址**: https://github.com/yourusername/UCanTCPmini
+**项目地址**: [https://github.com/yourusername/UCanTCPmini](https://github.com/kkkkorz/UcanTCPmini)
 
 如果你觉得这篇文章对你有帮助，欢迎Star！
 
