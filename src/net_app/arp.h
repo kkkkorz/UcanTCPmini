@@ -8,6 +8,7 @@
 
 void arp_init();
 void arp_process(packet *packet);                                       // 解析为ARP数据包
+void remove_header(packet *packet);                                     // 移除数据包头
 void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive); // 回应ARP数据包
 uint8_t *arp_request(uint8_t *ip, uint8_t *mac);                        // 发送ARP请求
 void arp_insert(uint8_t *ip, uint8_t *mac);                             // 插入ARP缓存表

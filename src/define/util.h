@@ -12,6 +12,12 @@ uint32_t bytes_to_uint32(uint8_t* bytes);
 
 //处理uint16_t大小端问题
 #define SWAP_UINT16(x) (((x) >> 8) | ((x) << 8))
+#define SWAP_UINT32(x) (((x) >> 24) | ((x) << 24) | (((x) & 0x00ff0000) >> 8) | (((x) & 0x0000ff00) << 8))
+
+//将两个字节转换为一个无符号数
+inline uint16_t bytes_to_uint16(uint8_t* bytes){
+    return (bytes[0] << 8) | bytes[1];
+}
 //将ip地址转为数字
 
 #define IP_TO_UINT32(ip) (((uint32_t)(ip[0]) << 24) | ((uint32_t)(ip[1]) << 16) | ((uint32_t)(ip[2]) << 8) | ((uint32_t)(ip[3])))

@@ -3,10 +3,9 @@
 #include "util.h"
 #include "ip.h"
 
-void icmp_process(packet *packet_receive)
+void icmp_process(ip_packet *ip_packet_receive)
 { // 传入ip层数据包
     // 拆封数据包
-    ip_packet *ip_packet_receive = (ip_packet *)packet_receive->data;          // 获取ip数据包
     icmp_packet *icmp_packet_receive = (icmp_packet *)(ip_packet_receive + 1); // 获取icmp数据包
     if (icmp_packet_receive->type == ICMP_ECHO_REQUEST)
     { // 类型为8则ping请求

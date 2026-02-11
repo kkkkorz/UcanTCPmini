@@ -4,6 +4,7 @@
 #include "util.h"
 #include "tiny_net.h"
 #include "arp.h"
+#include "tcp.h"
 void ip_process(packet* packet_receive){
     ip_packet* ip_packet_receive = (ip_packet*)packet_receive->data;//获取ip数据包结构体
     uint8_t prpotocol = ip_packet_receive->protocol;
@@ -12,7 +13,12 @@ void ip_process(packet* packet_receive){
     switch (prpotocol)
     {
     case ICMP_TYPE: // ICMP
-        icmp_process(packet_receive);
+        icmp_process(ip_packet_receive);
+        break;
+    case TCP_TYPE: // TCP
+        tcp_process(ip_packet_receive);
+        break;
+    case UDP_TYPE: // UDP
         break;
     
     default:
@@ -20,12 +26,12 @@ void ip_process(packet* packet_receive){
     }
 }
             //上层数据      上层协议             目的ip地址     上层数据长度
-void ip_send(uint8_t* data,uint8_t* protocol,uint8_t* dest_ip,uint32_t len){ //IP层发送数据包
+void ip_send(uint8_t* data,uint8_t protocol,uint8_t* dest_ip,uint32_t len){ //IP层发送数据包
     ip_packet* ip_packet_send = malloc(sizeof(ip_packet)+len);
     //添加头部01000101
     ip_packet_send->header_len = 0x45;
     ip_packet_send->service_type = 0;//？？
-    ip_packet_send->total_len = SWAP_UINT16(sizeof(ip_packet) + sizeof(icmp_packet));
+    ip_packet_send->total_len = SWAP_UINT16(sizeof(ip_packet) + len);
     ip_packet_send->identification = SWAP_UINT16(0x1234);//？？
     ip_packet_send->flag_fragment = SWAP_UINT16(0x4000);//？？
     ip_packet_send->ttl = 128;

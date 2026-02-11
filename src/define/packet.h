@@ -3,16 +3,6 @@
 
 #include <stdint.h>
 #pragma pack(1)//告诉编译器，结构体成员不进行字节对齐
-//网卡收到的数据包结构体 数据链路层
-typedef struct packet
-{
-    //Ethernet帧头
-    uint8_t destination_mac[6];//目的MAC地址
-    uint8_t source_mac[6];//源MAC地址
-    uint16_t ether_type;//协议类型
-
-    uint8_t data[2048];//数据
-}packet;
 typedef struct packet_node
 {
     //Ethernet帧头
@@ -23,18 +13,17 @@ typedef struct packet_node
     uint8_t data[2048];//数据
     uint32_t len;
 }packet_node;
-typedef struct arp_packet
+
+//网卡收到的数据包结构体 数据链路层
+typedef struct packet
 {
-    uint16_t htype;//硬件类型
-    uint16_t ptype;//协议类型
-    uint8_t hlen;//硬件长度
-    uint8_t plen;//协议长度
-    uint16_t operation;//操作类型
-    uint8_t sender_mac[6];//发送方MAC地址
-    uint8_t sender_ip[4];//发送方IP地址
-    uint8_t target_mac[6];//目标方MAC地址
-    uint8_t target_ip[4];//目标方IP地址
-}arp_packet;
+    //Ethernet帧头
+    uint8_t destination_mac[6];//目的MAC地址
+    uint8_t source_mac[6];//源MAC地址
+    uint16_t ether_type;//协议类型
+
+    uint8_t data[2048];//数据
+}packet;
 typedef struct ip_packet
 {
     uint8_t header_len;//版本和头部长度
@@ -48,6 +37,23 @@ typedef struct ip_packet
     uint8_t source_ip[4];//源IP地址
     uint8_t destination_ip[4];//目的IP地址
 }ip_packet;
+
+typedef struct tcp_packet
+{
+    uint16_t source_port;//源端口
+    uint16_t destination_port;//目的端口
+
+    uint32_t seq;//序列号
+    uint32_t ack;//确认号
+    
+    uint8_t header_len;//头长度和res
+    uint8_t flags;//标志
+    uint16_t window;//窗口大小
+    uint16_t checksum;//校验和
+    uint16_t urgent_pointer;
+    uint8_t options[40];
+    uint8_t data[1024];
+}tcp_packet;
 typedef struct icmp_packet
 {
     uint8_t type;//类型
@@ -57,7 +63,17 @@ typedef struct icmp_packet
     uint16_t seq;//序列号
     uint8_t data[32];//数据 固定32字节
 }icmp_packet;
-
+typedef struct arp_packet
+{
+    uint16_t htype;//硬件类型
+    uint16_t ptype;//协议类型
+    uint8_t hlen;//硬件长度
+    uint8_t plen;//协议长度
+    uint16_t operation;//操作类型
+    uint8_t sender_mac[6];//发送方MAC地址
+    uint8_t sender_ip[4];//发送方IP地址
+    uint8_t target_mac[6];//目标方MAC地址
+    uint8_t target_ip[4];//目标方IP地址
+}arp_packet;
 #pragma pack()
-
 #endif

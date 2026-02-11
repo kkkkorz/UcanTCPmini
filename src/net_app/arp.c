@@ -69,9 +69,7 @@ uint8_t *get_mac_by_ip(uint8_t *ip)
 void arp_process(packet *packet_receive) // 解析为ARP数据包
 {
 
-    arp_packet *arp = (arp_packet *)malloc(sizeof(arp_packet));
-    // print_packet(packet_receive,sizeof(packet));
-    // 输出arp数据包的大小
+    arp_packet *arp = (arp_packet *)malloc(sizeof(arp_packet));//拆包
     memcpy(arp, packet_receive->data, sizeof(arp_packet));
     if (memcmp(arp->target_ip, host_ip_addr, 4) == 0)
     {

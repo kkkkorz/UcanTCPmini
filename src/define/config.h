@@ -46,7 +46,8 @@ extern  int  packet_queue_receive_index;//队尾
 #define ARP_OP_REPLY  2
 //IP 协议类型
 #define ICMP_TYPE  1
-#define IPV4  4
+#define TCP_TYPE  6
+#define UDP_TYPE  17
 
 
 //ICMP 类型
@@ -63,5 +64,6 @@ static uint32_t icmp_timestamp[1<<16];
 //超时时间
 static uint32_t icmp_timeout = 1000;
 
+//tcp 包全局i
 
 #endif
