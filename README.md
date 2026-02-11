@@ -1,18 +1,8 @@
 # 从零手写TCP/IP协议栈
 
-## 前言
-
-我是一名研二在读研究生，正在为即将到来的实习招聘季做准备。和很多计算机专业的同学一样，我匆匆忙忙地做了两个所谓的"外卖加点评"项目，背了一堆八股文就开始投递简历。
-
-面试过程中我发现一个有趣的现象：面试官对应届生似乎更看重**基础**，几乎没有怎么问我关于项目的细节。这让我开始反思：我的简历上那两个"全栈项目"真的能体现我的技术实力吗？
-
-答案显然是否定的。
-
-于是我决定沉下心来，真正去啃一些计算机科学的基础知识。TCP/IP协议栈作为计算机网络的核心，自然成了我的首选目标。
-
 ## 为什么选择手写TCP/IP？
 
-在B站上搜索"手写TCP"，我发现了李述铜老师的课程。正准备兴致勃勃地跟着视频敲代码，却发现他的代码风格我实在不太习惯——可能是太久没有写C语言了。
+本人对计算机网络有一定的了解，但是不满足于浅尝辄止，纸上谈兵的感觉，对计算机网咯的底层的实现十分好奇，于是在B站上搜索"手写TCP"的教程，我发现了李述铜老师的课程。正准备兴致勃勃地跟着视频敲代码，却发现他的代码风格我实在不太习惯——可能是太久没有写C语言了。
 
 与其纠结于代码风格，不如**完全从零开始**！
 
@@ -21,8 +11,6 @@
 - **借助AI工具**作为编程辅助
 - **使用WireShark抓包**来验证和调试
 - **复用李述铜老师的网卡操作接口**（毕竟我不是驱动专家）
-
-这将是一场真正的"从0到1"的挑战。
 
 ---
 
@@ -268,6 +256,61 @@ void ip_process(packet* packet_receive){
 
 ---
 
+### 2026-02-11：实现被动接受tcp握手请求
+
+**问题**：虚拟机总是不认我的第二次握手发送的数据包，但是抓包抓得到。
+
+**解决**：校验和有问题，需要使用伪首部进行校验和。
+
+**说明**：还有很多问题，例如不能使用malloc，暂时还没弄明白，还有各种硬编码问题，还需要重构项目结构之类的。道阻且长~
+
+```c
+void handle_tcp_syn(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive){
+    //读取对方的Seq
+    uint32_t seq = tcp_packet_receive->seq;
+
+
+    //计算ack，表示自己已经收到对方的数据
+    uint32_t ack =SWAP_UINT32( SWAP_UINT32(seq) + 1);//消耗一个字节
+    //生成自己的Seq：表示自己想要收到的数据的序号
+    uint32_t my_seq = time(NULL)%1000;
+
+    //创建tcp包
+    tcp_packet tcp_packet_send ;
+    tcp_packet_send.checksum = 0;
+    memset(&tcp_packet_send,0,sizeof(tcp_packet));
+    tcp_packet_send.source_port = tcp_packet_receive->destination_port;
+    tcp_packet_send.destination_port = tcp_packet_receive->source_port;
+    tcp_packet_send.seq = my_seq;
+    tcp_packet_send.ack = ack;
+    tcp_packet_send.flags = (1<<TCP_FLAG_SYN) |(1<< TCP_FLAG_ACK);
+    tcp_packet_send.window = tcp_packet_receive->window;
+    tcp_packet_send.urgent_pointer = 0;
+    tcp_packet_send.header_len = 0x50;
+     //伪首部
+    uint8_t* pseudo_header = malloc(32);
+    memcpy(pseudo_header, ip_packet_receive->destination_ip, 4);
+    memcpy(pseudo_header + 4, ip_packet_receive->source_ip, 4);
+    pseudo_header[8] = 0;
+    pseudo_header[9] = 6;
+    pseudo_header[10] = 0;
+    pseudo_header[11] = 0x14;
+    memcpy(pseudo_header + 12, &tcp_packet_send, 20);
+    tcp_packet_send.checksum = calculate_checksum(pseudo_header, 32);
+    free(pseudo_header);
+    //发送tcp包
+    ip_send(&tcp_packet_send, TCP_TYPE , ip_packet_receive->source_ip, 20);
+    Sleep(1000);
+  //  free(tcp_packet_send);
+}
+```
+
+
+
+
+
+---
+
 ## 工具函数
 
 **字节序转换（网络是大端，x86是小端）：**
@@ -335,12 +378,11 @@ void ip_str_to_uint8(uint8_t* ip, char* ip_str){
 
 ## 关于我
 
-一个正在努力提升自己的研二学生，希望通过手写TCP/IP协议栈来夯实计算机网络基础。
+一个正在努力提升自己的研二学生
 
-**项目地址**: [https://github.com/yourusername/UCanTCPmini](https://github.com/kkkkorz/UcanTCPmini)
+**项目地址**: [[kkkkorz/UcanTCPmini](https://github.com/kkkkorz/UcanTCPmini)](https://github.com/kkkkorz/UcanTCPmini)
 
 如果你觉得这篇文章对你有帮助，欢迎Star！
 
 ---
 
-*最后更新：2026-02-10*
