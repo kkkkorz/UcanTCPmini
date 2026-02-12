@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include "pcap/pcap.h"
 #include "packet.h"
+#include "header.h"
 
 //主机的IP地址和MAC地址
 //static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
@@ -16,16 +17,16 @@ static uint8_t host_ip_addr[4] = {192,168,254,254};
 static uint8_t host_mac[6] = {0x11,0x22,0x33,0x44,0x55,0x66};
 //设备控制器
 static pcap_t* device = NULL;
-//数据包默认大小
-static unsigned int packet_default_size = 2048;
+//数据包最大长度
+#define MAX_PACKET_LEN 2048
 //广播地址
 static uint8_t broadcast_mac[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
 //消息队列 暂时使用轮询
 #define PACKET_QUEUE_SIZE 100
-extern  packet_node* packet_queue_send[PACKET_QUEUE_SIZE];
+extern  base_packet* packet_queue_send[PACKET_QUEUE_SIZE];
 extern  int  packet_queue_send_index;//队尾
 
-extern  packet* packet_queue_receive[PACKET_QUEUE_SIZE];
+extern  base_packet* packet_queue_receive[PACKET_QUEUE_SIZE];
 extern  int  packet_queue_receive_index;//队尾
 
 
@@ -64,6 +65,11 @@ static uint32_t icmp_timestamp[1<<16];
 //超时时间
 static uint32_t icmp_timeout = 1000;
 
-//tcp 包全局i
+//各个层协议头长度
+#define TCP_HEADER_LEN 20
+#define IP_HEADER_LEN 20
+#define ETH_HEADER_LEN 14
+#define ARP_HEADER_LEN 28
+#define ICMP_HEADER_LEN 8
 
 #endif

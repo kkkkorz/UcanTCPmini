@@ -26,6 +26,7 @@
 #ifndef TINY_NET_H
 #define TINY_NET_H
 #include "packet.h"
+#include "header.h"
 
 
 //数据包初始化
@@ -36,13 +37,13 @@ void net_init();
 
 
 //接收数据包
-void net_recv(packet* packet);
+void net_recv();
 
 //添加数据链路层包头
-void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len);
+void net_data_send(base_packet *data, uint8_t *destination, uint8_t *source, uint16_t ether_type);
 
 //处理数据包
-void packet_process(packet* packet);
+void packet_process(base_packet* packet);
 
 //运行协议栈
 void net_run();
@@ -51,6 +52,9 @@ void net_run();
 void print_packet(packet* packet_receive,uint32_t len);
 
 //发送数据包
-void send_packet(packet_node* packet_node);
+void send_packet(base_packet* packet_node);
+
+//添加数据链路层包头
+void add_ethernet_header(base_packet *data, uint8_t *destination, uint8_t *source, uint16_t ether_type);
 #endif // XNET_TINY_H
 

@@ -310,6 +310,7 @@ void pcap_device_close(pcap_t* pcap) {
  * 向网络接口发送数据包
  */
 uint32_t pcap_device_send(pcap_t* pcap, const uint8_t* buffer, uint32_t length) {
+    
     if (pcap_sendpacket(pcap, buffer, length) == -1) {
         fprintf(stderr, "pcap send: send packet failed!:%s\n", pcap_geterr(pcap));
         fprintf(stderr, "pcap send: pcaket size %d\n", length);
@@ -322,7 +323,7 @@ uint32_t pcap_device_send(pcap_t* pcap, const uint8_t* buffer, uint32_t length) 
 /**
  * 从网络接口读取数据包
  */
-uint32_t pcap_device_read(pcap_t* pcap, uint8_t* buffer, uint32_t length) {
+uint32_t pcap_device_read(pcap_t* pcap, uint8_t* buffer) {
     int err;
     struct pcap_pkthdr* pkthdr;
     const uint8_t* pkt_data;

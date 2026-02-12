@@ -3,61 +3,69 @@
 
 #include <stdint.h>
 
-//将两个字节转换为一个无符号数
-uint16_t bytes_to_uint16(uint8_t* bytes);
-//将一个无符号数转换为两个字节
-void uint16_to_bytes(uint16_t value,uint8_t* bytes);
-//将四个字节转换为一个无符号数
-uint32_t bytes_to_uint32(uint8_t* bytes);
+// 将两个字节转换为一个无符号数
+uint16_t bytes_to_uint16(uint8_t *bytes);
+// 将一个无符号数转换为两个字节
+void uint16_to_bytes(uint16_t value, uint8_t *bytes);
+// 将四个字节转换为一个无符号数
+uint32_t bytes_to_uint32(uint8_t *bytes);
 
-//处理uint16_t大小端问题
+// 处理uint16_t大小端问题
 #define SWAP_UINT16(x) (((x) >> 8) | ((x) << 8))
 #define SWAP_UINT32(x) (((x) >> 24) | ((x) << 24) | (((x) & 0x00ff0000) >> 8) | (((x) & 0x0000ff00) << 8))
 
-//将两个字节转换为一个无符号数
-inline uint16_t bytes_to_uint16(uint8_t* bytes){
+// 将两个字节转换为一个无符号数
+inline uint16_t bytes_to_uint16(uint8_t *bytes)
+{
     return (bytes[0] << 8) | bytes[1];
 }
-//将ip地址转为数字
+// 将ip地址转为数字
 
 #define IP_TO_UINT32(ip) (((uint32_t)(ip[0]) << 24) | ((uint32_t)(ip[1]) << 16) | ((uint32_t)(ip[2]) << 8) | ((uint32_t)(ip[3])))
 
-//将数字转为ip地址
-#define UINT32_TO_IP(ip,num) ip[0] = (num >> 24) & 0xff; ip[1] = ()
+// 将数字转为ip地址
+#define UINT32_TO_IP(ip, num)   \
+    ip[0] = (num >> 24) & 0xff; \
+    ip[1] = ()
 
-//将点分十进制的ip字符串转为uint8_t数组
-inline void   ip_str_to_uint8(uint8_t* ip,char* ip_str){
-    char* token = strtok(ip_str,".");
+// 将点分十进制的ip字符串转为uint8_t数组
+inline void ip_str_to_uint8(uint8_t *ip, char *ip_str)
+{
+    char *token = strtok(ip_str, ".");
     int i = 0;
-    while(token != NULL){
+    while (token != NULL)
+    {
         ip[i] = atoi(token);
-        token = strtok(NULL,".");
+        token = strtok(NULL, ".");
         i++;
     }
     return;
 }
-//校验ip地址是否合法
+// 校验ip地址是否合法
 
-//校验mac地址是否合法
+// 校验mac地址是否合法
 
-
-//计算校验和
- inline uint16_t  calculate_checksum(uint16_t *addr, int count) {
+// 计算校验和
+inline uint16_t calculate_checksum(uint16_t *addr, int count)
+{
     uint32_t sum = 0;
     uint16_t *ptr = addr;
     // 将所有 16 位字相加
-    while (count > 1) {
+    while (count > 1)
+    {
         sum += *ptr++;
         count -= 2;
     }
 
     // 处理可能的最后一个字节（如果总字节数为奇数）
-    if (count > 0) {
+    if (count > 0)
+    {
         sum += *(uint8_t *)ptr; // 将最后一个字节视为高8位，低8位为0
     }
 
     // 将进位加到低16位
-    while (sum >> 16) {
+    while (sum >> 16)
+    {
         sum = (sum & 0xffff) + (sum >> 16);
     }
 
@@ -65,7 +73,28 @@ inline void   ip_str_to_uint8(uint8_t* ip,char* ip_str){
     return (uint16_t)(~sum);
 }
 
+#include <windows.h>
 
+// 定义计时器结构体
+typedef struct
+{
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    LARGE_INTEGER frequency;
+} NetTimer;
 
+// 初始化频率并开始计时
+inline void Timer_start(NetTimer *t)
+{
+    QueryPerformanceFrequency(&t->frequency);
+    QueryPerformanceCounter(&t->start);
+}
+
+// 停止计时并返回毫秒数 (double 类型，保留小数部分即微秒)
+inline double timer_stop_ms(NetTimer *t)
+{
+    QueryPerformanceCounter(&t->end);
+    return (double)(t->end.QuadPart - t->start.QuadPart) * 1000.0 / t->frequency.QuadPart;
+}
 
 #endif

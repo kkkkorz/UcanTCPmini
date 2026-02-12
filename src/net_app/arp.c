@@ -3,6 +3,7 @@
 #include "config.h"
 #include "tiny_net.h"
 #include "util.h"
+#include "header.h"
 void arp_init() // todo
 {
     //memset(arp_cache, 0, sizeof(arp_cache));
@@ -66,11 +67,9 @@ uint8_t *get_mac_by_ip(uint8_t *ip)
     }
     return NULL;
 }
-void arp_process(packet *packet_receive) // 解析为ARP数据包
+base_packet* arp_process(base_packet *packet_receive) 
 {
-
-    arp_packet *arp = (arp_packet *)malloc(sizeof(arp_packet));//拆包
-    memcpy(arp, packet_receive->data, sizeof(arp_packet));
+     ARP_HEADER *arp = (ARP_HEADER *)(packet_receive->buffer+packet_receive->offset);// 解析为ARP数据包
     if (memcmp(arp->target_ip, host_ip_addr, 4) == 0)
     {
         uint16_t operation = arp->operation;
@@ -79,21 +78,23 @@ void arp_process(packet *packet_receive) // 解析为ARP数据包
         if (operation == ARP_OP_REQUEST)// ARP请求
         { 
             // 处理ARP请求：发送ARP应答
-            arp_reply(packet_receive, arp);
+           return arp_reply(arp);
         }
         else if (operation == ARP_OP_REPLY)
         {  // 处理ARP应答
-            arp_process_reply(packet_receive);
+            arp_process_reply(arp);
+            return NULL;
         }
     }
-    free(arp);
 }
 
-void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送ARP数据包
+base_packet* arp_reply(ARP_HEADER* arp_header_receive ) // 发送ARP数据包
 {
-
+    // 更新缓存表
+    arp_insert(arp_header_receive->sender_ip, arp_header_receive->sender_mac);
     // 封装ARP数据包
-    arp_packet *arp = (arp_packet *)malloc(sizeof(arp_packet));
+    base_packet* send_packet =  malloc(sizeof(base_packet));
+    ARP_HEADER *arp = (ARP_HEADER *)malloc(sizeof(ARP_HEADER));
     arp->htype = SWAP_UINT16(HTYPE);
     arp->ptype = SWAP_UINT16(PTYPE);
     arp->hlen = HLEN;
@@ -101,22 +102,18 @@ void arp_reply(packet *packet_receive, arp_packet *arp_packet_receive) // 发送
     arp->operation = SWAP_UINT16(ARP_OP_REPLY);               // 设置操作类型为应答
     memcpy(arp->sender_mac, host_mac, 6);                     // 设置发送方MAC地址为当前主机的MAC地址
     memcpy(arp->sender_ip, host_ip_addr, 4);                  // 设置发送方IP地址为当前主机的IP地址
-    memcpy(arp->target_mac, packet_receive->source_mac, 6);   // 设置目标方MAC地址为发送方MAC地址
-    memcpy(arp->target_ip, arp_packet_receive->sender_ip, 4); // 设置目标方IP地址为发送方IP地址
-    // 更新缓存表
-    arp_insert(arp_packet_receive->sender_ip, packet_receive->source_mac);
-
-    net_data_send(arp, arp->target_mac,host_mac, ARP_TYPE, sizeof(arp_packet));
-    free(arp);
+    memcpy(arp->target_mac, arp_header_receive->sender_mac, 6);   // 设置目标方MAC地址为发送方MAC地址
+    memcpy(arp->target_ip, arp_header_receive->sender_ip, 4); // 设置目标方IP地址为发送方IP地址
+    send_packet->buffer = (uint8_t*)arp;
+    send_packet->len = sizeof(ARP_HEADER);
+    return send_packet;
 }
-void arp_process_reply(packet* packet_receive){
-    arp_packet *arp = (arp_packet *)(packet_receive->data);//取出ARP数据包
+void arp_process_reply(ARP_HEADER* arp){
     arp_insert(arp->sender_ip, arp->sender_mac);//更新缓存表
 }
 //发送ARP请求
 uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
-    packet *packet_request = malloc(sizeof(packet));//构建数据包
-    arp_packet *arp_packet_request = (arp_packet *)packet_request->data;//获取ARP数据包结构体
+    ARP_HEADER *arp_packet_request = malloc(sizeof(ARP_HEADER));//构建数据包
 
     arp_packet_request->hlen = HLEN;
     arp_packet_request->htype = SWAP_UINT16(HTYPE);
@@ -127,8 +124,13 @@ uint8_t* arp_request(uint8_t* ip,uint8_t* mac){
     memcpy(arp_packet_request->sender_ip, host_ip_addr, 4);//源IP地址
     memcpy(arp_packet_request->target_mac, broadcast_mac, 6);//目标MAC地址
     memcpy(arp_packet_request->target_ip, ip, 4);//目标IP地址
-    net_data_send(arp_packet_request, broadcast_mac, host_mac, ARP_TYPE, sizeof(arp_packet));//向下传递
-    free(packet_request);
+
+    base_packet* send_data = malloc(sizeof(base_packet));
+    send_data->buffer = (uint8_t*)arp_packet_request;
+    send_data->len = sizeof(ARP_HEADER);
+
+    add_ethernet_header(send_data, broadcast_mac, host_mac, ARP_TYPE);
+    send_packet(send_data);
     return NULL;
     
 }

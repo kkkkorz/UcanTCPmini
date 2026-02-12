@@ -30,15 +30,16 @@
 #include "ip.h"
 #include "config.h"
 #include "util.h"
-packet_node* packet_queue_send[PACKET_QUEUE_SIZE];//发送队列
-int  packet_queue_send_index = -1;//队尾
+#include "header.h"
+base_packet *packet_queue_send[PACKET_QUEUE_SIZE] = {NULL}; // 发送队列
+int packet_queue_send_index = -1;                           // 队尾
 
-packet* packet_queue_receive[PACKET_QUEUE_SIZE];//接收队列
-int packet_queue_receive_index = -1;//队尾
+base_packet *packet_queue_receive[PACKET_QUEUE_SIZE]; // 接收队列
+int packet_queue_receive_index = -1;                  // 队尾
 
 void net_init()
 {
-    device = pcap_device_open(real_host_ip,host_mac, 1); // 打开物理网卡
+    device = pcap_device_open(real_host_ip, host_mac, 1); // 打开物理网卡
     if (!device)
     {
         printf("打开网卡失败\n");
@@ -47,55 +48,80 @@ void net_init()
 // 接收数据包
 void net_recv()
 {
-    packet *packet_receive = malloc(sizeof(packet));
-    uint32_t len = pcap_device_read(device, packet_receive, sizeof(packet));
-    // print_packet(packet_receive,len);
+    uint8_t *buffer = malloc(MAX_PACKET_LEN);
+    uint32_t len = pcap_device_read(device, buffer);
     if (len > 0)
     {
-        packet_queue_receive[++packet_queue_receive_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = packet_receive;
-        return;
-        printf("接收数据包成功\n");
+        base_packet *data = malloc(sizeof(base_packet));
+        data->buffer = malloc(len); // 只保留数据部分
+        data->len = len;
+        data->offset = 0;
+        memcpy(data->buffer, buffer, len);
+        packet_queue_receive[++packet_queue_receive_index >= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = data;
+        printf("接收数据包成功%d\n", packet_queue_receive_index);
     }
     else if (len < 0)
     {
         printf("接收数据包出错\n");
     }
-    free(packet_receive);
+    free(buffer);
 }
 
-
-// 数据链路层发送，上层调用无需关心数据包头
-void net_data_send(packet *up_packet_send, uint8_t *destination, uint8_t *source, uint16_t ether_type, uint32_t len)
+// 添加数据链路层包头
+void add_ethernet_header(base_packet *data, uint8_t *destination, uint8_t *source, uint16_t ether_type)
 {
-    packet *packet_send = (packet *)malloc(len + 14);
-    // 这里增加数据链路层的包头
+    ETH_HEADER *packet_send = malloc(sizeof(ETH_HEADER) + data->len);
+    // 填充以太网帧头部
     memcpy(packet_send->destination_mac, destination, 6);
     memcpy(packet_send->source_mac, source, 6);
-    packet_send->ether_type =SWAP_UINT16(ether_type);//处理UINT16
-    // 连接数据
-    memcpy(packet_send->data, up_packet_send, len);
-    //封装为消息队列的节点
-    packet_node* packet_send_node = (packet_node*)malloc(sizeof(packet_node));
-    memcpy(packet_send_node, packet_send, len+14);
-    packet_send_node->len = len+14;
-    packet_queue_send[++packet_queue_send_index>= PACKET_QUEUE_SIZE ? 0 : packet_queue_send_index] = packet_send_node;
-    free(packet_send);
+    packet_send->ether_type = SWAP_UINT16(ether_type); // 处理字节序
+    // 连接上层数据
+    memcpy((uint8_t *)packet_send + sizeof(ETH_HEADER), data->buffer, data->len);
+    // 更新 base_packet 结构体
+    free(data->buffer);
+    data->buffer = (uint8_t *)packet_send;
+    data->len += sizeof(ETH_HEADER);
+}
+
+// 数据链路层发送，上层调用无需关心数据包头
+void net_data_send(base_packet *data)
+{
+    // 封装为消息队列的节点
+    packet_queue_send[++packet_queue_send_index >= PACKET_QUEUE_SIZE ? 0 : packet_queue_send_index] = data;
 }
 
 // 处理数据包
-void packet_process(packet *packet_receive)
+
+void packet_process(base_packet *packet_receive)
 {
     // 判断数据包类型
-    uint16_t type = packet_receive->ether_type;
-    type = SWAP_UINT16(type);
+    ETH_HEADER *header = (ETH_HEADER *)(packet_receive->buffer + packet_receive->offset);
+
+    uint16_t type = SWAP_UINT16(header->ether_type);
+    base_packet *echo_data = NULL;
     printf("数据包类型：%d\n", type);
+    packet_receive->len -= sizeof(ETH_HEADER);    // 减去数据包头
+    packet_receive->offset += sizeof(ETH_HEADER); // 移动数据包指针
     switch (type)
     {
     case ARP_TYPE:
-        arp_process(packet_receive);
+        echo_data = arp_process(packet_receive);
+        if (echo_data != NULL)
+        {                                   //直接使用这里的mac地址
+            add_ethernet_header(echo_data, header->source_mac, host_mac, ARP_TYPE); // 封装为以太网帧
+            net_data_send(echo_data);
+        }
         break;
     case IP_TYPE:
-        ip_process(packet_receive);
+        echo_data = ip_process(packet_receive);
+        if (echo_data != NULL)
+        {
+                                                          // 开始计时
+            add_ethernet_header(echo_data, header->source_mac, host_mac, IP_TYPE); // 封装为以太网帧
+            net_data_send(echo_data);
+
+        }
+
         break;
     default:
         break;
@@ -117,8 +143,9 @@ void print_packet(packet *packet_receive, uint32_t len)
     }
     printf("\n");
 }
-void send_packet(packet_node* packet_node){
-    uint32_t res = pcap_device_send(device, (uint8_t*)packet_node, packet_node->len);
+void send_packet(base_packet *packet)
+{
+    uint32_t res = pcap_device_send(device, packet->buffer, packet->len);
     if (res >= 0)
     {
         printf("发送数据包成功\n");

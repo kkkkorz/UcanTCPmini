@@ -1,62 +1,93 @@
-#include"ip.h"
-#include"config.h"
+#include "ip.h"
+#include "config.h"
 #include "icmp.h"
 #include "util.h"
 #include "tiny_net.h"
 #include "arp.h"
 #include "tcp.h"
-void ip_process(packet* packet_receive){
-    ip_packet* ip_packet_receive = (ip_packet*)packet_receive->data;//获取ip数据包结构体
-    uint8_t prpotocol = ip_packet_receive->protocol;
-    //白嫖arp缓存
-    arp_insert(ip_packet_receive->source_ip, packet_receive->source_mac);
+#include "header.h"
+base_packet *ip_process(base_packet *data)
+{
+    IP_HEADER *ip_header_receive = (IP_HEADER *)(data->buffer + data->offset);
+    data->offset += sizeof(IP_HEADER);
+    data->len -= sizeof(IP_HEADER);
+    uint8_t prpotocol = ip_header_receive->protocol;
+    // 白嫖arp缓存
+   // arp_insert(ip_header_receive->source_ip, ((ETH_HEADER *)(data->buffer))->source_mac);
     switch (prpotocol)
     {
     case ICMP_TYPE: // ICMP
-        icmp_process(ip_packet_receive);
+        base_packet *reply = icmp_process(data);
+        if (reply != NULL)
+        {
+            add_ip_header(reply, ICMP_TYPE, ip_header_receive->source_ip);
+        }
+        return reply;
         break;
     case TCP_TYPE: // TCP
-        tcp_process(ip_packet_receive);
+        tcp_process(data);
         break;
     case UDP_TYPE: // UDP
         break;
-    
+
     default:
         break;
     }
 }
-            //上层数据      上层协议             目的ip地址     上层数据长度
-void ip_send(uint8_t* data,uint8_t protocol,uint8_t* dest_ip,uint32_t len){ //IP层发送数据包
-    ip_packet* ip_packet_send = malloc(sizeof(ip_packet)+len);
-    //添加头部01000101
-    ip_packet_send->header_len = 0x45;
-    ip_packet_send->service_type = 0;//？？
-    ip_packet_send->total_len = SWAP_UINT16(sizeof(ip_packet) + len);
-    ip_packet_send->identification = SWAP_UINT16(0x1234);//？？
-    ip_packet_send->flag_fragment = SWAP_UINT16(0x4000);//？？
-    ip_packet_send->ttl = 128;
-    ip_packet_send->protocol = protocol;
-    memcpy(ip_packet_send->source_ip, host_ip_addr, 4);
-    memcpy(ip_packet_send->destination_ip, dest_ip, 4);
-    ip_packet_send->checksum = 0;
-    ip_packet_send->checksum = calculate_checksum(ip_packet_send, sizeof(ip_packet));
-    //拼接data
-    memcpy(ip_packet_send + 1, data, len);
-    uint8_t* dest_mac = get_mac_by_ip(dest_ip);
-    if(dest_mac == NULL){
-       arp_request(dest_ip, NULL);
-       //等待arp请求完成
-       uint32_t wait_time = 0;
-       while(get_mac_by_ip(dest_ip) == NULL){
-           Sleep(10);
-           wait_time+= 10;
-           if(wait_time > 1000){
-               printf("Timeout when arp\n");
-               return;
-           }
-       }
-       dest_mac = get_mac_by_ip(dest_ip);
+void ip_send(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
+{
+    // 调用 add_ip_header 构造 IP 包
+    add_ip_header(data, protocol, dest_ip);
+
+    // 获取目标 MAC 地址
+    uint8_t *dest_mac = get_mac_by_ip(dest_ip);
+    if (dest_mac == NULL)
+    {
+        arp_request(dest_ip, NULL); // 发送 ARP 请求
+        uint32_t wait_time = 0;
+        while (get_mac_by_ip(dest_ip) == NULL)
+        {
+            Sleep(10);
+            wait_time += 10;
+            if (wait_time > 1000)
+            {
+                printf("Timeout when arp\n");
+                return;
+            }
+        }
+        dest_mac = get_mac_by_ip(dest_ip);
     }
-    net_data_send(ip_packet_send, dest_mac,host_mac, IP_TYPE, len + sizeof(ip_packet));//向下传递
-    free(ip_packet_send);
+
+    // 向下传递数据包
+    add_ethernet_header(data, dest_mac, host_mac, IP_TYPE);
+    send_packet(data);
+}
+
+void add_ip_header(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
+{
+    // 分配新的缓冲区，用于存储 IP 头部和上层数据
+    IP_HEADER *ip_packet_send = malloc(sizeof(IP_HEADER) + data->len);
+
+    // 填充 IP 头部字段
+    ip_packet_send->header_len = 0x45;                                      // 固定值：IPv4 头部长度为 20 字节（5 * 4）
+    ip_packet_send->service_type = 0;                                       // 服务类型（ToS），通常设置为 0
+    ip_packet_send->total_len = SWAP_UINT16(sizeof(IP_HEADER) + data->len); // 总长度（头部 + 数据）
+    ip_packet_send->identification = SWAP_UINT16(0x1234);                   // 标识符，用于分片重组
+    ip_packet_send->flag_fragment = SWAP_UINT16(0x4000);                    // 标志位和分片偏移量（不分片）
+    ip_packet_send->ttl = 128;                                              // 生存时间（TTL）
+    ip_packet_send->protocol = protocol;                                    // 上层协议类型（如 ICMP、TCP、UDP）
+    memcpy(ip_packet_send->source_ip, host_ip_addr, 4);                     // 源 IP 地址
+    memcpy(ip_packet_send->destination_ip, dest_ip, 4);                     // 目标 IP 地址
+
+    // 计算校验和
+    ip_packet_send->checksum = 0;
+    ip_packet_send->checksum = calculate_checksum(ip_packet_send, sizeof(IP_HEADER));
+
+    // 将上层数据复制到 IP 包中
+    memcpy((uint8_t *)ip_packet_send + sizeof(IP_HEADER), data->buffer, data->len);
+
+    // 更新 base_packet 结构体
+    free(data->buffer);                       // 释放旧的缓冲区
+    data->buffer = (uint8_t *)ip_packet_send; // 替换为新的缓冲区
+    data->len += sizeof(IP_HEADER);           // 更新数据长度
 }

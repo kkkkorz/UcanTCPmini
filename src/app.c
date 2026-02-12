@@ -30,6 +30,7 @@
 #include "ping.h"
 #include "thread_utils.h"
 #include "config.h"
+#include "header.h"
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -65,6 +66,7 @@ static void *net_send_thread(void *arg) //发送数据包的线程
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
             if(packet_queue_send[i] != NULL){
                 send_packet(packet_queue_send[i]);
+                free(packet_queue_send[i]->buffer);
                 free(packet_queue_send[i]);
                 packet_queue_send[i] = NULL;
             }
@@ -84,13 +86,14 @@ static void *net_process_thread(void *arg) //处理数据包的线程
         for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
             if(packet_queue_receive[i] != NULL){
                 packet_process(packet_queue_receive[i]);
+                free(packet_queue_receive[i]->buffer);
                 free(packet_queue_receive[i]);
                 packet_queue_receive[i] = NULL;
             }
         }
         Sleep(1);
-        
     }
+    
     return NULL;
 }
 

@@ -7,7 +7,6 @@
 void tcp_send(ip_packet *pkt, uint16_t src_port, uint16_t dst_port, uint32_t seq, uint32_t ack, uint8_t flags, uint16_t window_size, uint16_t urgent_pointer)
 {
 
-    ip_send(pkt, (uint8_t *)"TCP", pkt->destination_ip, sizeof(tcp_packet));
 }
 
 void tcp_process(ip_packet *ip_packet_receive)
@@ -63,13 +62,14 @@ void tcp_process(ip_packet *ip_packet_receive)
       //  } else {
             // 场景：纯确认包。
             // 逻辑：通常用于完成三次握手的最后一步，或者单纯确认你发出的数据已被收到。
-        //    handle_tcp_ack(ip_packet_receive, tcp_packet_receive);
+           handle_tcp_ack(ip_packet_receive, tcp_packet_receive);
        // }
     }
-    
+    //这里计算校验和
+
     
 }
-
+// 处理 SYN：回应第一次握手，标志位设置为 SYN+ACK
 void handle_tcp_syn(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive){
     //读取对方的Seq
     uint32_t seq = tcp_packet_receive->seq;
@@ -91,7 +91,7 @@ void handle_tcp_syn(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive
     tcp_packet_send.flags = (1<<TCP_FLAG_SYN) |(1<< TCP_FLAG_ACK);
     tcp_packet_send.window = tcp_packet_receive->window;
     tcp_packet_send.urgent_pointer = 0;
-    tcp_packet_send.header_len = 0x50;
+    tcp_packet_send.header_len = 0x50;//len:0101 res:0000
      //伪首部
     uint8_t* pseudo_header = malloc(32);
     memcpy(pseudo_header, ip_packet_receive->destination_ip, 4);
@@ -111,6 +111,7 @@ void handle_tcp_syn(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive
 
 
 }
+// 处理 SYN+ACK：接受第二次握手
 void handle_tcp_syn_ack(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive){
     //读取对方的Seq
     uint32_t seq = tcp_packet_receive->seq;
@@ -132,22 +133,38 @@ void handle_tcp_syn_ack(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_rec
     tcp_packet_send.urgent_pointer = 0;
     tcp_packet_send.header_len = 5;
     //伪首部
-    uint8_t* pseudo_header = malloc(32);
+    uint8_t* pseudo_header = malloc(TCP_HEADER_LEN+12); //伪首部+tcp包
+
     memcpy(pseudo_header, ip_packet_receive->destination_ip, 4);
     memcpy(pseudo_header + 4, ip_packet_receive->source_ip, 4);
     pseudo_header[8] = 0;
     pseudo_header[9] = 6;
     pseudo_header[10] = 0;
      pseudo_header[11] = 0x14;
-    memcpy(pseudo_header + 12, &tcp_packet_send, 20);
-    tcp_packet_send.checksum = calculate_checksum(pseudo_header, 32);
-    //tcp_packet_send.checksum = calculate_checksum(&tcp_packet_send, 20);
+    memcpy(pseudo_header + 12, &tcp_packet_send, TCP_HEADER_LEN);//拼接在一起
+    tcp_packet_send.checksum = calculate_checksum(pseudo_header, TCP_HEADER_LEN+12);//校验和
     free(pseudo_header);
-    ip_send(&tcp_packet_send, TCP_TYPE , ip_packet_receive->source_ip, 20);
+    ip_send(&tcp_packet_send, TCP_TYPE , ip_packet_receive->source_ip, TCP_HEADER_LEN);
     Sleep(1000);
 
     
 }
+
+// 处理 ACK：三次握手的最后一步和数据传输一同处理
+void handle_tcp_ack(ip_packet* ip_packet_receive, tcp_packet* tcp_packet_receive){
+    //打印并回复相同的数据
+    printf("[TCP] ACK: %s\n", (char*)(tcp_packet_receive->data));
+    //设置seq 和 ack
+    tcp_packet_receive->ack = tcp_packet_receive->seq+1;
+    tcp_packet_receive->seq = tcp_packet_receive->ack;
+    ip_send(tcp_packet_receive, TCP_TYPE , ip_packet_receive->source_ip, 20);
+}
+
+
+
+
+
+
 void set_flag(uint8_t *flags, uint8_t value,uint8_t target) {
     if(target){
     *flags |= (1 << value);//设置标志位

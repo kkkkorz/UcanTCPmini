@@ -75,5 +75,18 @@ typedef struct arp_packet
     uint8_t target_mac[6];//目标方MAC地址
     uint8_t target_ip[4];//目标方IP地址
 }arp_packet;
+typedef struct tcp_pseudo_header {
+    uint32_t src_addr;
+    uint32_t dest_addr;
+    uint8_t  placeholder;
+    uint8_t  protocol;
+    uint8_t tcp_length[2];
+}tcp_pseudo_header;
+typedef struct tcp_packet_pseudo_header
+{
+    tcp_pseudo_header tcp_pseudo_header;
+    tcp_packet tcp_packet;
+}tcp_packet_pseudo_header;
+
 #pragma pack()
 #endif
