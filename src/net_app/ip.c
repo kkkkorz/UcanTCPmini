@@ -26,9 +26,10 @@ base_packet *ip_process(base_packet *data)
         return reply;
         break;
     case TCP_TYPE: // TCP
-        reply = tcp_process(data);
+        reply = tcp_process(data, IP_TO_UINT32(ip_header_receive->source_ip), IP_TO_UINT32(ip_header_receive->destination_ip));
         if (reply != NULL)
         {
+            printf("len:%d", reply->len);
             pseudo_header_checksum(reply, ip_header_receive);
             add_ip_header(reply, TCP_TYPE, ip_header_receive->source_ip);
             return reply;

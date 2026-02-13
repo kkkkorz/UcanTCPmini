@@ -72,4 +72,6 @@ static uint32_t icmp_timeout = 1000;
 #define ARP_HEADER_LEN 28
 #define ICMP_HEADER_LEN 8
 
+#define INFO(info) printf("%s\n",info)
+
 #endif

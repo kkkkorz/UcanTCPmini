@@ -31,6 +31,7 @@
 #include "config.h"
 #include "util.h"
 #include "header.h"
+#include "tcp.h"
 base_packet *packet_queue_send[PACKET_QUEUE_SIZE] = {NULL}; // 发送队列
 int packet_queue_send_index = -1;                           // 队尾
 
@@ -44,6 +45,7 @@ void net_init()
     {
         printf("打开网卡失败\n");
     }
+    tcp_init();
 }
 // 接收数据包
 void net_recv()
@@ -107,7 +109,7 @@ void packet_process(base_packet *packet_receive)
     case ARP_TYPE:
         echo_data = arp_process(packet_receive);
         if (echo_data != NULL)
-        {                                   //直接使用这里的mac地址
+        {                                                                           // 直接使用这里的mac地址
             add_ethernet_header(echo_data, header->source_mac, host_mac, ARP_TYPE); // 封装为以太网帧
             net_data_send(echo_data);
         }
@@ -116,10 +118,9 @@ void packet_process(base_packet *packet_receive)
         echo_data = ip_process(packet_receive);
         if (echo_data != NULL)
         {
-                                                          // 开始计时
+            
             add_ethernet_header(echo_data, header->source_mac, host_mac, IP_TYPE); // 封装为以太网帧
             net_data_send(echo_data);
-
         }
 
         break;
