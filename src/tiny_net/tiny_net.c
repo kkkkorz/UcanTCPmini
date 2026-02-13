@@ -72,6 +72,8 @@ void net_recv()
 // 添加数据链路层包头
 void add_ethernet_header(base_packet *data, uint8_t *destination, uint8_t *source, uint16_t ether_type)
 {
+    if (data == NULL)
+        return;
     ETH_HEADER *packet_send = malloc(sizeof(ETH_HEADER) + data->len);
     // 填充以太网帧头部
     memcpy(packet_send->destination_mac, destination, 6);
@@ -118,7 +120,7 @@ void packet_process(base_packet *packet_receive)
         echo_data = ip_process(packet_receive);
         if (echo_data != NULL)
         {
-            
+
             add_ethernet_header(echo_data, header->source_mac, host_mac, IP_TYPE); // 封装为以太网帧
             net_data_send(echo_data);
         }

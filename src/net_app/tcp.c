@@ -66,7 +66,7 @@ base_packet *tcp_process(base_packet *data, uint32_t src_ip, uint32_t des_ip)
         //  } else {
         // 场景：纯确认包。
         // 逻辑：通常用于完成三次握手的最后一步，或者单纯确认你发出的数据已被收到。
-        data_send = handle_tcp_ack(data);
+        data_send = handle_tcp_ack(data, src_ip, des_ip);
         // }
     }
     if (data_send == NULL)
@@ -89,25 +89,27 @@ base_packet *handle_tcp_syn(base_packet *data, uint32_t src_ip, uint32_t dst_ip)
     node->tcb.local_port = tcp_packet_receive->destination_port;
     node->tcb.remote_port = tcp_packet_receive->source_port;
 
+    printf("%d--------", tcp_packet_receive->destination_port);
+
     // 3. 序列号同步
     // 对方的 Seq
     uint32_t guest_seq = SWAP_UINT32(tcp_packet_receive->seq);
     // 我们期望收到：对方 Seq + 1 (SYN 占用 1 字节)
     node->tcb.rcv_nxt = guest_seq + 1;
-    // 我们自己的初始序列号 (ISS)
-    node->tcb.snd_nxt = local_seq;
+    // 初相对始序列号
+    node->tcb.snd_nxt = (uint32_t)time(NULL);
 
     // 设置状态
     node->tcb.state = TCP_STATE_SYN_RECV;
 
-    // 4. 将 TCB 存入仓库
+    // 插入tcb表
     if (insert_tcb(node) != SUCCESS)
     {
         free(node);
         return NULL; // 可能是连接冲突或内存不足
     }
 
-    // 5. 构造 SYN+ACK 响应包
+    // 构造 SYN+ACK 响应包
     TCP_HEADER *tcp_packet_send = malloc(sizeof(TCP_HEADER));
     memset(tcp_packet_send, 0, sizeof(TCP_HEADER));
 
@@ -119,12 +121,9 @@ base_packet *handle_tcp_syn(base_packet *data, uint32_t src_ip, uint32_t dst_ip)
     tcp_packet_send->header_len = 0x50; // 20 字节
     tcp_packet_send->window = SWAP_UINT16(65535);
 
-    // 6. 更新本地序列号 (发送 SYN 也会消耗 1 个序号)
+    // 回复SYN消耗一个序列号
     node->tcb.snd_nxt++;
-    // 注意：如果是全局 local_seq，也要同步更新以供下一个连接使用
-    local_seq += 1000; // 建议每次新连接跨度大一点，防止序号重叠
-
-    // 7. 封装返回
+    // 封装返回
     base_packet *data_send = malloc(sizeof(base_packet));
     data_send->buffer = (uint8_t *)tcp_packet_send;
     data_send->len = sizeof(TCP_HEADER);
@@ -165,8 +164,24 @@ void handle_tcp_syn_ack(base_packet *data)
 }
 
 // 处理 ACK：三次握手的最后一步和数据传输一同处理
-base_packet *handle_tcp_ack(base_packet *receive_data) // 数据解析
+base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip) // 数据解析
 {
+
+    // 构建tcb_key拿对应的TCB
+    tcp_key *key = malloc(sizeof(tcp_key));
+    TCP_HEADER *tcp_packet_receive = (TCP_HEADER *)(receive_data->buffer + receive_data->offset);
+    key->local_ip = des_ip;
+    key->local_port = tcp_packet_receive->destination_port;
+    key->remote_ip = src_ip;
+    key->remote_port = tcp_packet_receive->source_port;
+
+    tcb_node *tcb = get_tcb(key);
+    free(key);
+    if (tcb == NULL)
+    {
+        return NULL;
+    }
+
     remov_tcp_header(receive_data);
     if (receive_data->len <= 0)
     {
@@ -175,14 +190,32 @@ base_packet *handle_tcp_ack(base_packet *receive_data) // 数据解析
     }
     else
     {
+        for (uint32_t i = 0; i < receive_data->len; i++)
+        {
+            printf("%c", *(receive_data->buffer + (receive_data->offset + i)));
+        }
+        printf("\n");
+
         // transfer to http
 
         TCP_HEADER *tcp_header = malloc(sizeof(TCP_HEADER));
         base_packet *data = malloc(sizeof(base_packet));
+        data->buffer = malloc(sizeof(receive_data->len));
         base_packet *tcp_packet = malloc(sizeof(base_packet));
 
-        data->len = 0; // 暂时不发送数据
-        tcp_header->ack;
+        data->len = receive_data->len; // 回显数据
+        memcpy(data->buffer, receive_data->buffer, receive_data->len);
+
+        (tcb->tcb.rcv_nxt) += (data->len);                     // 更新发送序列
+        tcp_header->ack = tcp_packet_receive->seq + data->len; // 更新确认ack
+        tcp_header->checksum = 0;
+        tcp_header->source_port = tcp_packet_receive->destination_port;
+        tcp_header->destination_port = tcp_packet_receive->source_port;
+        tcp_header->seq = tcb->tcb.rcv_nxt; // 本地的seq
+        tcp_header->flags = (1 << TCP_FLAG_SYN) | (1 << TCP_FLAG_ACK);
+        tcp_header->window = tcp_packet_receive->window;
+        tcp_header->urgent_pointer = 0;
+        tcp_header->header_len = 0x50; // len:0101 res:0000
 
         add_tcp_header(tcp_packet, tcp_header, data);
         free(data);
@@ -214,7 +247,6 @@ void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *da
     tcp_packet->len = header_len + data_len;
     memcpy(tcp_packet->buffer, header, header_len);
     memcpy(tcp_packet->buffer + header_len, data->buffer, data_len);
-    return tcp_packet;
 }
 void set_flag(uint8_t *flags, uint8_t value, uint8_t target)
 {

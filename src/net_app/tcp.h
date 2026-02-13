@@ -22,7 +22,7 @@ base_packet *tcp_process(base_packet *data, uint32_t src_ip, uint32_t des_ip);
 base_packet *handle_tcp_syn(base_packet *data, uint32_t src_ip, uint32_t dst_ip);
 void set_flags(uint8_t *flags, uint8_t CWR, uint8_t ECE, uint8_t URG, uint8_t ACK, uint8_t PSH, uint8_t RST, uint8_t SYN, uint8_t FIN);
 void handle_tcp_syn_ack(ip_packet *ip_packet_receive, tcp_packet *tcp_packet_receive);
-base_packet *handle_tcp_ack(base_packet *tcp_packet_receive); // 处理ACK包
+base_packet *handle_tcp_ack(base_packet *receive_data,uint32_t src_ip,uint32_t des_ip) ; // 处理ACK包
 void set_flag(uint8_t *flags, uint8_t value, uint8_t target);
 void remov_tcp_header(base_packet *data);
 void tcp_init();
@@ -46,7 +46,6 @@ void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *da
 #define TCP_STATE_TIME_WAIT 10 // 等待足够时间以确保对方收到最后的 ACK (通常是 2MSL)
 
 #define TCB_TABLE_MAX_SIZE 100
-#pragma pack(1)
 
 typedef struct tcp_tcb
 {
@@ -70,7 +69,6 @@ typedef struct tcb_node
     tcp_tcb tcb;
     struct tcb_node *next;
 } tcb_node;
-#pragma pack()
 typedef enum
 {
     SUCCESS,
