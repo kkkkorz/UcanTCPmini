@@ -43,6 +43,20 @@ typedef struct ARP_HEADER
     uint8_t target_mac[6];//目标方MAC地址
     uint8_t target_ip[4];//目标方IP地址
 } ARP_HEADER;
+typedef struct TCP_HEADER
+{
+    uint16_t source_port;//源端口
+    uint16_t destination_port;//目的端口
+    uint32_t seq;//序列号
+    uint32_t ack;//确认号
+    uint8_t header_len;//头长度和res
+    uint8_t flags;//标志
+    uint16_t window;//窗口大小
+    uint16_t checksum;//校验和
+    uint16_t urgent_pointer;
+}TCP_HEADER;
+
+
 typedef struct base_packet
 {
     uint8_t *buffer;

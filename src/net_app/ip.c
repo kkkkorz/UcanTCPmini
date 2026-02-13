@@ -12,12 +12,13 @@ base_packet *ip_process(base_packet *data)
     data->offset += sizeof(IP_HEADER);
     data->len -= sizeof(IP_HEADER);
     uint8_t prpotocol = ip_header_receive->protocol;
+    base_packet *reply = NULL;
     // 白嫖arp缓存
-   // arp_insert(ip_header_receive->source_ip, ((ETH_HEADER *)(data->buffer))->source_mac);
+    // arp_insert(ip_header_receive->source_ip, ((ETH_HEADER *)(data->buffer))->source_mac);
     switch (prpotocol)
     {
     case ICMP_TYPE: // ICMP
-        base_packet *reply = icmp_process(data);
+        reply = icmp_process(data);
         if (reply != NULL)
         {
             add_ip_header(reply, ICMP_TYPE, ip_header_receive->source_ip);
@@ -25,7 +26,13 @@ base_packet *ip_process(base_packet *data)
         return reply;
         break;
     case TCP_TYPE: // TCP
-        tcp_process(data);
+        reply = tcp_process(data);
+        if (reply != NULL)
+        {
+            pseudo_header_checksum(reply, ip_header_receive);
+            add_ip_header(reply, TCP_TYPE, ip_header_receive->source_ip);
+            return reply;
+        }
         break;
     case UDP_TYPE: // UDP
         break;
@@ -90,4 +97,19 @@ void add_ip_header(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
     free(data->buffer);                       // 释放旧的缓冲区
     data->buffer = (uint8_t *)ip_packet_send; // 替换为新的缓冲区
     data->len += sizeof(IP_HEADER);           // 更新数据长度
+}
+// 计算伪首部计算校验和
+void pseudo_header_checksum(base_packet *tcp_reply_packet, IP_HEADER *ip_header_receive)
+{
+    TCP_HEADER *tcp_reply = (TCP_HEADER *)(tcp_reply_packet->buffer);
+    uint8_t *pseudo_header = malloc(12 + tcp_reply_packet->len);
+    memcpy(pseudo_header, ip_header_receive->destination_ip, 4);
+    memcpy(pseudo_header + 4, ip_header_receive->source_ip, 4);
+    pseudo_header[8] = 0;
+    pseudo_header[9] = 6;
+    pseudo_header[10] = 0;
+    pseudo_header[11] = 0x14;
+    memcpy(pseudo_header + 12, tcp_reply, tcp_reply_packet->len);
+    tcp_reply->checksum = calculate_checksum(pseudo_header, 12 + tcp_reply_packet->len);
+    free(pseudo_header);
 }
