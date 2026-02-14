@@ -10,7 +10,8 @@ base_packet *ip_process(base_packet *data)
 {
     IP_HEADER *ip_header_receive = (IP_HEADER *)(data->buffer + data->offset);
     data->offset += sizeof(IP_HEADER);
-    data->len -= sizeof(IP_HEADER);
+    uint16_t total_len = SWAP_UINT16(ip_header_receive->total_len);
+    data->len = total_len - sizeof(IP_HEADER);
     uint8_t prpotocol = ip_header_receive->protocol;
     base_packet *reply = NULL;
     // 白嫖arp缓存
@@ -109,8 +110,9 @@ void pseudo_header_checksum(base_packet *tcp_reply_packet, IP_HEADER *ip_header_
     pseudo_header[8] = 0;
     pseudo_header[9] = 6;
     pseudo_header[10] = 0;
-    pseudo_header[11] = 0x14;
+    pseudo_header[11] = (uint8_t)tcp_reply_packet->len;//TODO
     memcpy(pseudo_header + 12, tcp_reply, tcp_reply_packet->len);
+    printf("tcp_reply_packet->len:%d\n",tcp_reply_packet->len);
     tcp_reply->checksum = calculate_checksum(pseudo_header, 12 + tcp_reply_packet->len);
     free(pseudo_header);
 }

@@ -60,7 +60,6 @@ void net_recv()
         data->offset = 0;
         memcpy(data->buffer, buffer, len);
         packet_queue_receive[++packet_queue_receive_index >= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = data;
-        printf("接收数据包成功%d\n", packet_queue_receive_index);
     }
     else if (len < 0)
     {

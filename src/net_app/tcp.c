@@ -204,20 +204,20 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
         base_packet *tcp_packet = malloc(sizeof(base_packet));
 
         data->len = receive_data->len; // 回显数据
-        memcpy(data->buffer, receive_data->buffer, receive_data->len);
+        memcpy(data->buffer, receive_data->buffer + receive_data->offset, receive_data->len);
 
-                                                     // 更新本地的发送序列
+        // 更新本地的发送序列
         tcp_header->ack = SWAP_UINT32(SWAP_UINT32(tcp_packet_receive->seq) + data->len); // 更新确认ack
         tcp_header->checksum = 0;
         tcp_header->source_port = tcp_packet_receive->destination_port;
         tcp_header->destination_port = tcp_packet_receive->source_port;
         tcp_header->seq = SWAP_UINT32(tcb->tcb.snd_nxt); // 本地的seq
-        tcp_header->flags = (1 << TCP_FLAG_ACK);
+        tcp_header->flags = (1 << TCP_FLAG_PSH | 1 << TCP_FLAG_ACK);
         tcp_header->window = tcp_packet_receive->window;
         tcp_header->urgent_pointer = 0;
         tcp_header->header_len = 0x50; // len:0101 res:0000
-        //本地消耗
-        (tcb->tcb.snd_nxt) += (data->len);  
+        // 本地消耗
+        (tcb->tcb.snd_nxt) += (data->len);
         add_tcp_header(tcp_packet, tcp_header, data);
         free(data);
         free(tcp_header);
