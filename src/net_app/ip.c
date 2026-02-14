@@ -44,7 +44,7 @@ base_packet *ip_process(base_packet *data)
     }
     return reply;
 }
-void ip_send(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
+void ip_send(base_packet *data, uint8_t protocol, uint8_t *dest_ip) //这里判断是不是tcp，来判断要不要加虚拟头是不是更好
 {
     // 调用 add_ip_header 构造 IP 包
     add_ip_header(data, protocol, dest_ip);

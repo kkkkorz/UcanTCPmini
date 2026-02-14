@@ -236,14 +236,14 @@ static uint32_t calculate_hash(tcp_key *key)
 }
 
 // 主动发起tcp连接
-void tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destination_port)
+void tcp_connect(uint8_t *destination_ip, uint16_t source_port, uint16_t destination_port)
 {
     // 1. 准备 TCB 节点
     tcb_node *node = malloc(sizeof(tcb_node));
     memset(node, 0, sizeof(tcb_node));
     // 2. 填充连接基本信息
     node->tcb.local_ip = IP_TO_UINT32(host_ip_addr);
-    node->tcb.remote_ip = destination_ip;
+    node->tcb.remote_ip = IP_TO_UINT32(destination_ip);
     node->tcb.local_port = source_port;
     node->tcb.remote_port = destination_port;
     // 3. 序列号同步
@@ -265,8 +265,8 @@ void tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destina
     TCP_HEADER *tcp_packet_send = malloc(sizeof(TCP_HEADER));
     memset(tcp_packet_send, 0, sizeof(TCP_HEADER));
 
-    tcp_packet_send->source_port = node->tcb.local_port;
-    tcp_packet_send->destination_port = node->tcb.remote_port;
+    tcp_packet_send->source_port = SWAP_UINT16(node->tcb.local_port);
+    tcp_packet_send->destination_port = SWAP_UINT16(node->tcb.remote_port);
     tcp_packet_send->seq = SWAP_UINT32(node->tcb.snd_nxt); // 这个不重要，直接置为0
     tcp_packet_send->ack = SWAP_UINT32(node->tcb.rcv_nxt);
     tcp_packet_send->flags = (1 << TCP_FLAG_SYN);
@@ -280,6 +280,12 @@ void tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destina
     data_send->buffer = (uint8_t *)tcp_packet_send;
     data_send->len = sizeof(TCP_HEADER);
     data_send->offset = 0;
+    // 校验暂时写在这里 //TODO
+    IP_HEADER *ip_header = malloc(sizeof(IP_HEADER));
+    memcpy(ip_header->destination_ip, destination_ip, 4);
+    memcpy(ip_header->source_ip, host_ip_addr, 4);
+    pseudo_header_checksum(data_send, ip_header);
+    free(ip_header);
     ip_send(data_send, TCP_TYPE, destination_ip);
 }
 void tcp_init()
