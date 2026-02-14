@@ -2,6 +2,8 @@
 #define UTIL_H
 
 #include <stdint.h>
+#include <string.h>  
+#include <stdlib.h>  
 
 // 将两个字节转换为一个无符号数
 uint16_t bytes_to_uint16(uint8_t *bytes);

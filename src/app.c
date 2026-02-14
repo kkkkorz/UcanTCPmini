@@ -31,6 +31,7 @@
 #include "thread_utils.h"
 #include "config.h"
 #include "header.h"
+#include "tcp_conversation.h"
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -53,6 +54,14 @@ static void *net_cmd_thread(void *arg)
 
             if (scanf("%15s", ip) == 1)
                 send_ping(ip);
+        }
+        else if(strcmp(cmd, "socket") == 0){
+            char ip[16];
+            uint32_t port;
+            if (scanf("%15s", ip) == 1){
+                scanf("%d",&port);
+                tcp_conversation(ip,port);
+            }
         }
     }
     return NULL;

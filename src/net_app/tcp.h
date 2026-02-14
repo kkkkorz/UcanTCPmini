@@ -27,7 +27,7 @@ void set_flag(uint8_t *flags, uint8_t value, uint8_t target);
 void remov_tcp_header(base_packet *data);
 void tcp_init();
 void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *data);
-
+void tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destination_port);
 // TCB定义
 /* TCP 状态定义 (符合 RFC 793 标准) */
 
