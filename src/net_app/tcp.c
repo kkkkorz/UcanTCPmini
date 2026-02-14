@@ -224,16 +224,6 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
         return tcp_packet;
     }
 }
-base_packet *make_reply_data(base_packet *receive_data)
-{
-
-    for (uint32_t i = 0; i < receive_data->len; i++)
-    {
-        printf("%c", *(receive_data->buffer + receive_data->offset + i));
-    }
-    base_packet *data = malloc(sizeof(base_packet));
-    printf("\n");
-}
 void remov_tcp_header(base_packet *data)
 {
     TCP_HEADER *tcp_header = (TCP_HEADER *)(data->buffer + data->offset);

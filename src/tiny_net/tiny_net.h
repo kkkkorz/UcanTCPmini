@@ -40,7 +40,7 @@ void net_init();
 void net_recv();
 
 //添加数据链路层包头
-void net_data_send(base_packet *data, uint8_t *destination, uint8_t *source, uint16_t ether_type);
+void net_data_send(base_packet *data);
 
 //处理数据包
 void packet_process(base_packet* packet);
