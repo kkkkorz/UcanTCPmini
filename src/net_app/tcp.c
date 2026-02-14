@@ -3,6 +3,7 @@
 #include "config.h"
 #include "util.h"
 #include "ip.h"
+// 函数名重构为handle_sencond_shake这种形式
 
 base_packet *tcp_process(base_packet *data, uint32_t src_ip, uint32_t des_ip)
 {
@@ -18,9 +19,10 @@ base_packet *tcp_process(base_packet *data, uint32_t src_ip, uint32_t des_ip)
         // handle_tcp_reset(ip_packet_receive, tcp_packet_receive);
     }
 
-    // 握手响应
+    // 第二次握手
     else if ((flags & (1 << TCP_FLAG_SYN)) && (flags & (1 << TCP_FLAG_ACK)))
     {
+        data_send = handle_sencond_shake(data, src_ip, des_ip);
     }
     // 握手请求处理
     else if (flags & (1 << TCP_FLAG_SYN))
@@ -235,8 +237,8 @@ static uint32_t calculate_hash(tcp_key *key)
            TCB_TABLE_MAX_SIZE;
 }
 
-// 主动发起tcp连接
-void tcp_connect(uint8_t *destination_ip, uint16_t source_port, uint16_t destination_port)
+// 发起第一次握手
+void tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destination_port)
 {
     // 1. 准备 TCB 节点
     tcb_node *node = malloc(sizeof(tcb_node));
@@ -249,7 +251,7 @@ void tcp_connect(uint8_t *destination_ip, uint16_t source_port, uint16_t destina
     // 3. 序列号同步
     // 我们期望收到：对方 Seq + 1 (SYN 占用 1 字节)
     node->tcb.rcv_nxt = 0;
-    // 初相对始序列号
+    // 初相对始序列号 isn
     node->tcb.snd_nxt = (uint32_t)time(NULL);
 
     // 设置状态
@@ -267,14 +269,12 @@ void tcp_connect(uint8_t *destination_ip, uint16_t source_port, uint16_t destina
 
     tcp_packet_send->source_port = SWAP_UINT16(node->tcb.local_port);
     tcp_packet_send->destination_port = SWAP_UINT16(node->tcb.remote_port);
-    tcp_packet_send->seq = SWAP_UINT32(node->tcb.snd_nxt); // 这个不重要，直接置为0
-    tcp_packet_send->ack = SWAP_UINT32(node->tcb.rcv_nxt);
+    tcp_packet_send->seq = SWAP_UINT32(node->tcb.snd_nxt);
+    tcp_packet_send->ack = 0; // 这个不重要，直接置为0
     tcp_packet_send->flags = (1 << TCP_FLAG_SYN);
     tcp_packet_send->header_len = 0x50;
     tcp_packet_send->window = SWAP_UINT16(65535);
 
-    // 回复SYN消耗一个序列号
-    node->tcb.snd_nxt++;
     // 封装返回
     base_packet *data_send = malloc(sizeof(base_packet));
     data_send->buffer = (uint8_t *)tcp_packet_send;
@@ -287,7 +287,52 @@ void tcp_connect(uint8_t *destination_ip, uint16_t source_port, uint16_t destina
     pseudo_header_checksum(data_send, ip_header);
     free(ip_header);
     ip_send(data_send, TCP_TYPE, destination_ip);
+    // 消耗一个序列号
+    node->tcb.snd_nxt++;
 }
+// 接收第二次握手
+base_packet *handle_sencond_shake(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip)
+{
+    // 构建tcb_key拿对应的TCB
+    tcp_key *key = malloc(sizeof(tcp_key));
+    TCP_HEADER *tcp_packet_receive = (TCP_HEADER *)(receive_data->buffer + receive_data->offset);
+    key->local_ip = des_ip;
+    key->local_port = SWAP_UINT16(tcp_packet_receive->destination_port);
+    key->remote_ip = src_ip;
+    key->remote_port = SWAP_UINT16(tcp_packet_receive->source_port);
+
+    tcb_node *tcb = get_tcb(key);
+    free(key);
+    if (tcb != NULL)
+    {
+        tcb->tcb.state = TCP_STATE_ESTABLISHED;
+    }
+    else
+        return NULL;
+    tcb->tcb.rcv_nxt = SWAP_UINT32(tcp_packet_receive->seq) + 1;
+    // 构造 SYN+ACK 响应包
+    TCP_HEADER *tcp_packet_send = malloc(sizeof(TCP_HEADER));
+    memset(tcp_packet_send, 0, sizeof(TCP_HEADER));
+
+    tcp_packet_send->source_port = SWAP_UINT16(tcb->tcb.local_port);
+    tcp_packet_send->destination_port = SWAP_UINT16(tcb->tcb.remote_port);
+    tcp_packet_send->seq = SWAP_UINT32(tcb->tcb.snd_nxt);
+    tcp_packet_send->ack = SWAP_UINT32(tcb->tcb.rcv_nxt);
+    tcp_packet_send->flags = (1 << TCP_FLAG_ACK);
+    tcp_packet_send->header_len = 0x50;
+    tcp_packet_send->window = SWAP_UINT16(65535);
+
+    // 封装返回
+    base_packet *data_send = malloc(sizeof(base_packet));
+    data_send->buffer = (uint8_t *)tcp_packet_send;
+    data_send->len = sizeof(TCP_HEADER);
+    data_send->offset = 0;
+
+    // 更新seq
+    // tcb->tcb.snd_nxt = tcb->tcb.snd_nxt + 1;
+    return data_send;
+}
+
 void tcp_init()
 {
 }
