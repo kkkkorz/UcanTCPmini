@@ -32,21 +32,65 @@
 #include "util.h"
 #include "header.h"
 #include "tcp.h"
+#include "cJSON.h"
 base_packet *packet_queue_send[PACKET_QUEUE_SIZE] = {NULL}; // 发送队列
 int packet_queue_send_index = -1;                           // 队尾
 
 base_packet *packet_queue_receive[PACKET_QUEUE_SIZE]; // 接收队列
 int packet_queue_receive_index = -1;                  // 队尾
 
+// 读取文件内容到字符串
+char* read_file(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("无法打开文件: %s\n", filename);
+        return NULL;
+    }
+    
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    char* buffer = (char*)malloc(file_size + 1);
+    if (!buffer) {
+        fclose(file);
+        return NULL;
+    }
+    
+    fread(buffer, 1, file_size, file);
+    buffer[file_size] = '\0';
+    fclose(file);
+    
+    return buffer;
+}
+
 void load_config()
 {
-    // 这里直接使用了全局变量，简化代码设计
-    // get_host_ip(real_host_ip);
-    // get_host_mac(host_mac);
+    char* json_data = read_file("..\\src\\config.json");
+    cJSON* config = cJSON_Parse(json_data);
+    cJSON* hi = cJSON_GetObjectItem(config, "host_ip");
+    cJSON* hm = cJSON_GetObjectItem(config, "host_mac");
+    cJSON* rhi = cJSON_GetObjectItem(config, "real_host_ip");
+    cJSON* rhm = cJSON_GetObjectItem(config, "real_host_mac");
+    if (hi && hm && rhi && rhm)
+    {
+        // 解析IP地址
+        sscanf(hi->valuestring, "%hhu.%hhu.%hhu.%hhu", &host_ip_addr[0], &host_ip_addr[1], &host_ip_addr[2], &host_ip_addr[3]);
+        //sscanf(rhi->valuestring, "%hhu.%hhu.%hhu.%hhu", &real_host_ip[0], &real_host_ip[1], &real_host_ip[2], &real_host_ip[3]);
+        real_host_ip = rhi->valuestring;
+        // 解析MAC地址
+        sscanf(hm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &host_mac[0], &host_mac[1], &host_mac[2], &host_mac[3], &host_mac[4], &host_mac[5]);
+        sscanf(rhm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &real_host_mac[0], &real_host_mac[1], &real_host_mac[2], &real_host_mac[3], &real_host_mac[4], &real_host_mac[5]);
+    }
+    else
+    {
+        printf("配置文件格式错误\n");
+    }
 }
 
 void net_init()
 {
+    load_config(); // 加载配置文件
     device = pcap_device_open(real_host_ip, host_mac, 1); // 打开物理网卡
     if (!device)
     {
