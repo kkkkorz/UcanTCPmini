@@ -16,6 +16,14 @@ void tcp_conversation(char *ip, uint16_t port)
         printf("tcp_connect error\n");
         return;
     }
+    //输入并发送数据
+    while (1)
+    {
+        char buf[1024];
+        printf(">");
+        scanf("%s", buf);
+        tcp_send_data(tcb_node_res, buf, strlen(buf));
+    }
 
     free(distination_ip_uint8);
 }

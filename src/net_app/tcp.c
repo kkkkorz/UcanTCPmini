@@ -122,11 +122,11 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
     remov_tcp_header(receive_data);
     if (receive_data->len <= 0)
     {
-        printf("no data");
         return NULL;
     }
     else
     {
+        printf("receive data: ");
         for (uint32_t i = 0; i < receive_data->len; i++)
         {
             printf("%c", *(receive_data->buffer + (receive_data->offset + i)));
@@ -137,14 +137,11 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
 
         TCP_HEADER *tcp_header = malloc(sizeof(TCP_HEADER));
         base_packet *data = malloc(sizeof(base_packet));
-        data->buffer = malloc(receive_data->len);
+        data->buffer = NULL;
+        data->len = 0; // 单纯确认
         base_packet *tcp_packet = malloc(sizeof(base_packet));
-
-        data->len = receive_data->len; // 回显数据
-        memcpy(data->buffer, receive_data->buffer + receive_data->offset, receive_data->len);
-
         // 更新本地的发送序列
-        tcp_header->ack = SWAP_UINT32(SWAP_UINT32(tcp_packet_receive->seq) + data->len); // 更新确认ack
+        tcp_header->ack = SWAP_UINT32(SWAP_UINT32(tcp_packet_receive->seq) + receive_data->len); // 更新确认ack
         tcp_header->checksum = 0;
         tcp_header->source_port = tcp_packet_receive->destination_port;
         tcp_header->destination_port = tcp_packet_receive->source_port;
@@ -154,7 +151,7 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
         tcp_header->urgent_pointer = 0;
         tcp_header->header_len = 0x50; // len:0101 res:0000
         // 本地消耗
-        (tcb->tcb.snd_nxt) += (data->len);
+       // (tcb->tcb.snd_nxt) += (data->len);
         add_tcp_header(tcp_packet, tcp_header, data);
         free(data);
         free(tcp_header);
@@ -285,7 +282,7 @@ base_packet *handle_sencond_shake(base_packet *receive_data, uint32_t src_ip, ui
     TCP_HEADER *tcp_packet_receive = (TCP_HEADER *)(receive_data->buffer + receive_data->offset);
 
     // 1. 获取 TCB
-    tcp_key key = {des_ip, src_ip, SWAP_UINT16(tcp_packet_receive->destination_port), SWAP_UINT16(tcp_packet_receive->source_port)};
+    tcp_key key = {des_ip, src_ip, tcp_packet_receive->destination_port, tcp_packet_receive->source_port};
     tcb_node *tcb = get_tcb(&key);
 
     if (tcb == NULL)
@@ -346,8 +343,8 @@ void tcp_send_data(tcb_node *node, char *payload_data, uint32_t data_len)
 // 设置tcp头部通用信息
 void set_tcp_header(tcb_node *node, TCP_HEADER *tcp_header)
 {
-    tcp_header->source_port = SWAP_UINT16(node->tcb.local_port);
-    tcp_header->destination_port = SWAP_UINT16(node->tcb.remote_port);
+    tcp_header->source_port = node->tcb.local_port; //这个就是存的网络端序
+    tcp_header->destination_port = node->tcb.remote_port;
     tcp_header->seq = SWAP_UINT32(node->tcb.snd_nxt); // 当前发送序列号
     tcp_header->ack = SWAP_UINT32(node->tcb.rcv_nxt); // 确认对方的序列号
                                                       //  tcp_header->flags = (1 << TCP_FLAG_ACK) | (1 << TCP_FLAG_PSH); // PSH 表示立即推送到应用层
@@ -360,8 +357,8 @@ void set_tcb_node(tcb_node *node, uint16_t local_port, uint8_t *remote_ip, uint1
 {
     node->tcb.local_ip = IP_TO_UINT32(host_ip_addr);
     node->tcb.remote_ip = IP_TO_UINT32(remote_ip);
-    node->tcb.local_port = local_port;
-    node->tcb.remote_port = remote_port;
+    node->tcb.local_port =SWAP_UINT16( local_port);
+    node->tcb.remote_port =SWAP_UINT16(remote_port);
 }
 
 void tcp_init()

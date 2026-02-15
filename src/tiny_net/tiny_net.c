@@ -203,7 +203,7 @@ void send_packet(base_packet *packet)
     uint32_t res = pcap_device_send(device, packet->buffer, packet->len);
     if (res >= 0)
     {
-        printf("发送数据包成功\n");
+       
     }
     else
     {

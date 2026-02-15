@@ -30,7 +30,6 @@ base_packet *ip_process(base_packet *data)
         reply = tcp_process(data, IP_TO_UINT32(ip_header_receive->source_ip), IP_TO_UINT32(ip_header_receive->destination_ip));
         if (reply != NULL)
         {
-            printf("len:%d", reply->len);
             pseudo_header_checksum(reply, ip_header_receive);
             add_ip_header(reply, TCP_TYPE, ip_header_receive->source_ip);
             return reply;
@@ -105,15 +104,15 @@ void add_ip_header(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
 void pseudo_header_checksum(base_packet *tcp_reply_packet, IP_HEADER *ip_header_receive)
 {
     TCP_HEADER *tcp_reply = (TCP_HEADER *)(tcp_reply_packet->buffer);
+    tcp_reply->checksum = 0;
     uint8_t *pseudo_header = malloc(12 + tcp_reply_packet->len);
-    memcpy(pseudo_header, ip_header_receive->destination_ip, 4);
-    memcpy(pseudo_header + 4, ip_header_receive->source_ip, 4);
+    memcpy(pseudo_header, ip_header_receive->source_ip, 4);
+    memcpy(pseudo_header + 4, ip_header_receive->destination_ip, 4);
     pseudo_header[8] = 0;
     pseudo_header[9] = 6;
     pseudo_header[10] = (uint8_t)(tcp_reply_packet->len >> 8);   // 填充高 8 位
     pseudo_header[11] = (uint8_t)(tcp_reply_packet->len & 0xFF); // 填充低 8 位
     memcpy(pseudo_header + 12, tcp_reply, tcp_reply_packet->len);
-    printf("tcp_reply_packet->len:%d\n", tcp_reply_packet->len);
     tcp_reply->checksum = calculate_checksum(pseudo_header, 12 + tcp_reply_packet->len);
     free(pseudo_header);
 }
