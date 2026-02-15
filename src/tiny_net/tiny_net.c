@@ -43,6 +43,7 @@ int packet_queue_receive_index = -1;                  // 队尾
 char *read_file(const char *filename)
 {
     FILE *file = fopen(filename, "r");
+    
     if (!file)
     {
         printf("无法打开文件: %s\n", filename);

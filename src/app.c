@@ -41,6 +41,12 @@ static void *net_run_thread(void *arg)
 
 static void *net_cmd_thread(void *arg)
 {
+    printf("支持的命令：\n");
+    printf("ping <ip地址> - 发送ping请求\n");
+    printf("socket <ip地址> <端口号> - 与指定IP和端口建立TCP连接\n");
+    printf("ifconfig - 显示主机IP和MAC地址\n");
+    printf("arp -a - 显示ARP缓存表\n");
+    printf("exit - 退出程序\n");
     (void)arg;
     while (1)
     {
@@ -62,6 +68,32 @@ static void *net_cmd_thread(void *arg)
                 scanf("%d",&port);
                 tcp_conversation(ip,port);
             }
+        }
+        else if(strcmp(cmd, "exit") == 0){
+            printf("退出程序\n");
+            exit(0);
+        }
+        else if (strcmp(cmd, "ifconfig") == 0)
+        {
+            printf("主机IP地址: %d.%d.%d.%d\n", host_ip_addr[0], host_ip_addr[1], host_ip_addr[2], host_ip_addr[3]);
+            printf("主机MAC地址: %02x:%02x:%02x:%02x:%02x:%02x\n", host_mac[0], host_mac[1], host_mac[2], host_mac[3], host_mac[4], host_mac[5]);
+        }
+        else if(strcmp(cmd, "arp -a") == 0)
+        {
+            //print_arp_cache();
+        }
+        else if(strcmp(cmd, "help") == 0)
+        {
+            printf("支持的命令：\n");
+            printf("ping <ip地址> - 发送ping请求\n");
+            printf("socket <ip地址> <端口号> - 与指定IP和端口建立TCP连接\n");
+            printf("ifconfig - 显示主机IP和MAC地址\n");
+            printf("arp -a - 显示ARP缓存表\n");
+            printf("exit - 退出程序\n");
+        }
+        else
+        {
+            printf("未知命令\n");
         }
     }
     return NULL;
