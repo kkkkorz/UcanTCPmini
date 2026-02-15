@@ -40,43 +40,46 @@ base_packet *packet_queue_receive[PACKET_QUEUE_SIZE]; // 接收队列
 int packet_queue_receive_index = -1;                  // 队尾
 
 // 读取文件内容到字符串
-char* read_file(const char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (!file) {
+char *read_file(const char *filename)
+{
+    FILE *file = fopen(filename, "r");
+    if (!file)
+    {
         printf("无法打开文件: %s\n", filename);
         return NULL;
     }
-    
+
     fseek(file, 0, SEEK_END);
     long file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
-    char* buffer = (char*)malloc(file_size + 1);
-    if (!buffer) {
+
+    char *buffer = (char *)malloc(file_size + 1);
+    if (!buffer)
+    {
         fclose(file);
         return NULL;
     }
-    
+
     fread(buffer, 1, file_size, file);
     buffer[file_size] = '\0';
     fclose(file);
-    
+
     return buffer;
 }
 
 void load_config()
 {
-    char* json_data = read_file("..\\src\\config.json");
-    cJSON* config = cJSON_Parse(json_data);
-    cJSON* hi = cJSON_GetObjectItem(config, "host_ip");
-    cJSON* hm = cJSON_GetObjectItem(config, "host_mac");
-    cJSON* rhi = cJSON_GetObjectItem(config, "real_host_ip");
-    cJSON* rhm = cJSON_GetObjectItem(config, "real_host_mac");
+    char *json_data = read_file("..\\src\\config.json");
+    cJSON *config = cJSON_Parse(json_data);
+    cJSON *hi = cJSON_GetObjectItem(config, "host_ip");
+    cJSON *hm = cJSON_GetObjectItem(config, "host_mac");
+    cJSON *rhi = cJSON_GetObjectItem(config, "real_host_ip");
+    cJSON *rhm = cJSON_GetObjectItem(config, "real_host_mac");
     if (hi && hm && rhi && rhm)
     {
         // 解析IP地址
         sscanf(hi->valuestring, "%hhu.%hhu.%hhu.%hhu", &host_ip_addr[0], &host_ip_addr[1], &host_ip_addr[2], &host_ip_addr[3]);
-        //sscanf(rhi->valuestring, "%hhu.%hhu.%hhu.%hhu", &real_host_ip[0], &real_host_ip[1], &real_host_ip[2], &real_host_ip[3]);
+        // sscanf(rhi->valuestring, "%hhu.%hhu.%hhu.%hhu", &real_host_ip[0], &real_host_ip[1], &real_host_ip[2], &real_host_ip[3]);
         real_host_ip = rhi->valuestring;
         // 解析MAC地址
         sscanf(hm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &host_mac[0], &host_mac[1], &host_mac[2], &host_mac[3], &host_mac[4], &host_mac[5]);
@@ -90,7 +93,7 @@ void load_config()
 
 void net_init()
 {
-    load_config(); // 加载配置文件
+    load_config();                                        // 加载配置文件
     device = pcap_device_open(real_host_ip, host_mac, 1); // 打开物理网卡
     if (!device)
     {
@@ -153,7 +156,6 @@ void packet_process(base_packet *packet_receive)
 
     uint16_t type = SWAP_UINT16(header->ether_type);
     base_packet *echo_data = NULL;
-    printf("数据包类型：%d\n", type);
     packet_receive->len -= sizeof(ETH_HEADER);    // 减去数据包头
     packet_receive->offset += sizeof(ETH_HEADER); // 移动数据包指针
     switch (type)

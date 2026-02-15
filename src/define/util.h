@@ -26,9 +26,13 @@ inline uint16_t bytes_to_uint16(uint8_t *bytes)
 #define IP_TO_UINT32(ip) (((uint32_t)(ip[0]) << 24) | ((uint32_t)(ip[1]) << 16) | ((uint32_t)(ip[2]) << 8) | ((uint32_t)(ip[3])))
 
 // 将数字转为ip地址
-#define UINT32_TO_IP(ip, num)   \
-    ip[0] = (num >> 24) & 0xff; \
-    ip[1] = ()
+#define UINT32_TO_IP(ip, num)           \
+    do {                                \
+        ip[0] = (uint8_t)((num) >> 24); \
+        ip[1] = (uint8_t)((num) >> 16); \
+        ip[2] = (uint8_t)((num) >> 8);  \
+        ip[3] = (uint8_t)((num) & 0xff);\
+    } while (0)
 
 // 将点分十进制的ip字符串转为uint8_t数组
 inline void ip_str_to_uint8(uint8_t *ip, char *ip_str)

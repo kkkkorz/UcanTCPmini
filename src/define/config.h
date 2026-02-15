@@ -22,7 +22,7 @@ static pcap_t* device = NULL;
 //广播地址
 static uint8_t broadcast_mac[6] = {0xff,0xff,0xff,0xff,0xff,0xff};
 //消息队列 暂时使用轮询
-#define PACKET_QUEUE_SIZE 10
+#define PACKET_QUEUE_SIZE 100
 extern  base_packet* packet_queue_send[PACKET_QUEUE_SIZE];
 extern  int  packet_queue_send_index;//队尾
 
