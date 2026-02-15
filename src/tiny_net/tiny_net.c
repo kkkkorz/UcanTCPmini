@@ -38,6 +38,13 @@ int packet_queue_send_index = -1;                           // 队尾
 base_packet *packet_queue_receive[PACKET_QUEUE_SIZE]; // 接收队列
 int packet_queue_receive_index = -1;                  // 队尾
 
+void load_config()
+{
+    // 这里直接使用了全局变量，简化代码设计
+    // get_host_ip(real_host_ip);
+    // get_host_mac(host_mac);
+}
+
 void net_init()
 {
     device = pcap_device_open(real_host_ip, host_mac, 1); // 打开物理网卡
