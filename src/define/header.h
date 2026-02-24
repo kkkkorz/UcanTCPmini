@@ -55,7 +55,13 @@ typedef struct TCP_HEADER
     uint16_t checksum;//校验和
     uint16_t urgent_pointer;
 }TCP_HEADER;
-
+typedef struct UDP_HEADER
+{
+    uint16_t source_port;      // 源端口
+    uint16_t destination_port; // 目的端口
+    uint16_t length;           // UDP长度（包含头部和数据）
+    uint16_t checksum;         // 校验和
+} UDP_HEADER;
 
 
 typedef struct base_packet

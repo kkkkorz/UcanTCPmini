@@ -134,6 +134,6 @@ uint8_t *arp_request(uint8_t *ip, uint8_t *mac)
     send_data->len = sizeof(ARP_HEADER);
 
     add_ethernet_header(send_data, broadcast_mac, host_mac, ARP_TYPE);
-    send_packet(send_data);
+    net_data_send(send_data);
     return NULL;
 }

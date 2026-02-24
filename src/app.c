@@ -32,6 +32,7 @@
 #include "config.h"
 #include "header.h"
 #include "tcp_conversation.h"
+#include "udp_conversation.h"
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -55,25 +56,39 @@ static void *net_cmd_thread(void *arg)
             if (scanf("%15s", ip) == 1)
                 send_ping(ip);
         }
-        else if(strcmp(cmd, "socket") == 0){
+        else if (strcmp(cmd, "socket") == 0)
+        {
             char ip[16];
             uint32_t port;
-            if (scanf("%15s", ip) == 1){
-                scanf("%d",&port);
-                tcp_conversation(ip,port);
+            if (scanf("%15s", ip) == 1)
+            {
+                scanf("%d", &port);
+                tcp_conversation(ip, port);
+            }
+        }
+        else if (strcmp(cmd, "udp") == 0)
+        {
+            char ip[16];
+            uint32_t port;
+            if (scanf("%15s", ip) == 1)
+            {
+                scanf("%d", &port);
+                udp_conversation(ip, port);
             }
         }
     }
     return NULL;
 }
-static void *net_send_thread(void *arg) //发送数据包的线程
+static void *net_send_thread(void *arg) // 发送数据包的线程
 {
     (void)arg;
     while (1)
     {
-        //轮询队列中的数据包发送出去
-        for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
-            if(packet_queue_send[i] != NULL){
+        // 轮询队列中的数据包发送出去
+        for (int i = 0; i < PACKET_QUEUE_SIZE; i++)
+        {
+            if (packet_queue_send[i] != NULL)
+            {
                 send_packet(packet_queue_send[i]);
                 free(packet_queue_send[i]->buffer);
                 free(packet_queue_send[i]);
@@ -81,19 +96,20 @@ static void *net_send_thread(void *arg) //发送数据包的线程
             }
         }
         Sleep(1);
-        
     }
     return NULL;
 }
 
-static void *net_process_thread(void *arg) //处理数据包的线程
+static void *net_process_thread(void *arg) // 处理数据包的线程
 {
     (void)arg;
     while (1)
     {
-        //一直取队列中的数据包处理
-        for(int i = 0; i < PACKET_QUEUE_SIZE; i++){
-            if(packet_queue_receive[i] != NULL){
+        // 一直取队列中的数据包处理
+        for (int i = 0; i < PACKET_QUEUE_SIZE; i++)
+        {
+            if (packet_queue_receive[i] != NULL)
+            {
                 packet_process(packet_queue_receive[i]);
                 free(packet_queue_receive[i]->buffer);
                 free(packet_queue_receive[i]);
@@ -102,10 +118,9 @@ static void *net_process_thread(void *arg) //处理数据包的线程
         }
         Sleep(1);
     }
-    
+
     return NULL;
 }
-
 
 int main(void)
 {

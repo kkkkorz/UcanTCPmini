@@ -5,6 +5,7 @@
 #include "tiny_net.h"
 #include "arp.h"
 #include "tcp.h"
+#include "udp.h"
 #include "header.h"
 base_packet *ip_process(base_packet *data)
 {
@@ -36,6 +37,10 @@ base_packet *ip_process(base_packet *data)
         }
         break;
     case UDP_TYPE: // UDP
+        reply = udp_process(data);
+        if(reply != NULL){
+
+        }
         break;
 
     default:
@@ -69,7 +74,7 @@ void ip_send(base_packet *data, uint8_t protocol, uint8_t *dest_ip) //这里判�
 
     // 向下传递数据包
     add_ethernet_header(data, dest_mac, host_mac, IP_TYPE);
-    send_packet(data);
+    net_data_send(data);
 }
 
 void add_ip_header(base_packet *data, uint8_t protocol, uint8_t *dest_ip)
