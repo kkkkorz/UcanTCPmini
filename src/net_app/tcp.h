@@ -20,7 +20,7 @@ typedef struct tcp_tcb
 {
     uint32_t local_ip, remote_ip;
     uint16_t local_port, remote_port;
-    int state;        // ESTABLISHED, etc.
+    int state; // ESTABLISHED, etc.
     // 未来可以挂载应用层数据，比如 http_context
 
     // --- 滑动窗口核心变量 ---
@@ -81,6 +81,8 @@ void set_tcb_node(tcb_node *node, uint16_t local_port, uint8_t *remote_ip, uint1
 void set_tcp_header(tcb_node *node, TCP_HEADER *tcp_header);
 void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *data);
 base_packet *handle_tcp_fin(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip);
+void app_layer_dispatch(tcb_node *tcb, char *data, uint32_t len);
+void handle_http_request(tcb_node *tcb, char *request);
 // TCB定义
 /* TCP 状态定义 (符合 RFC 793 标准) */
 

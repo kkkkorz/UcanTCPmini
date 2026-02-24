@@ -148,6 +148,8 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
             printf("%c", receive_data->buffer[receive_data->offset + i]);
         }
         printf("\n");
+        // 判断是否是http请求
+        app_layer_dispatch(tcb, (char *)(receive_data->buffer + receive_data->offset), receive_data->len);
 
         // 4. 构造 ACK 回复
         // -----------------------------------------------------------
@@ -168,7 +170,7 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
 
         add_tcp_header(ack_packet, &ack_header, &empty_payload);
 
-        //发送数据包：作为生产者放入待确认队列
+        // 发送数据包：作为生产者放入待确认队列
 
         return ack_packet;
     }
@@ -522,18 +524,21 @@ void tcp_show_netstat()
     }
 }
 
-
 // 检查重传
-void check_retransmit() {
-    for (int i = 0; i < TCB_TABLE_MAX_SIZE; i++) {
+void check_retransmit()
+{
+    for (int i = 0; i < TCB_TABLE_MAX_SIZE; i++)
+    {
         tcb_node *curr = tcb_table[i];
-        while (curr) {
-            if (curr->valid && curr->tcb.retrans_buf) {
+        while (curr)
+        {
+            if (curr->valid && curr->tcb.retrans_buf)
+            {
                 // 如果超过 500ms 未收到 ACK
-                if ((clock() - curr->tcb.last_send_time) > 500) {
+                if ((clock() - curr->tcb.last_send_time) > 500)
+                {
                     printf("[TCP] Timeout! Retransmitting Seq: %u\n", curr->tcb.snd_una);
                     // 重新调用底层发送逻辑，这里为了简洁只做示意
-
 
                     // 实际应重发 snd_una 对应的数据
                     curr->tcb.last_send_time = clock();
@@ -542,6 +547,82 @@ void check_retransmit() {
             curr = curr->next;
         }
     }
+}
+
+void app_layer_dispatch(tcb_node *tcb, char *data, uint32_t len)
+{
+    // 简单判断：如果前 3 个字节是 "GET"，说明是 HTTP 请求
+    if (strncmp(data, "GET", 3) == 0)
+    {
+        printf("[HTTP]  GET \n");
+        handle_http_request(tcb, data);
+    }
+}
+// 假设你的 HTML 文件都放在工程目录下的 "www" 文件夹里
+#define WEB_ROOT "./www"
+
+void handle_http_request(tcb_node *tcb, char *request_data)
+{
+    char method[10], path[256], protocol[20];
+
+    // 1. 解析请求行 (提取方法和路径)
+    // sscanf 会根据空格切分字符串
+    if (sscanf(request_data, "%s %s %s", method, path, protocol) < 3)
+    {
+        return;
+    }
+
+    // 2. 如果访问根目录 /，默认指向 index.html
+    if (strcmp(path, "/") == 0)
+    {
+        strcpy(path, "/index.html");
+    }
+
+    // 3. 拼接完整的文件路径
+    char full_path[512];
+    snprintf(full_path, sizeof(full_path), "%s%s", WEB_ROOT, path);
+
+    // 4. 读取文件内容
+    FILE *file = fopen(full_path, "rb");
+    if (file == NULL)
+    {
+        // 如果文件不存在，返回 404
+        printf("[HTTP] File not found: %s\n", full_path);
+        char *not_found_resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+        tcp_send_data(tcb, not_found_resp, strlen(not_found_resp));
+        return;
+    }
+
+    // 获取文件大小
+    fseek(file, 0, SEEK_END);
+    long file_size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // 读取文件到缓冲区
+    char *file_buf = malloc(file_size);
+    fread(file_buf, 1, file_size, file);
+    fclose(file);
+
+    // 5. 构造并发送响应头
+    char header[256];
+    int header_len = sprintf(header,
+                             "HTTP/1.1 200 OK\r\n"
+                             "Content-Type: text/html\r\n"
+                             "Content-Length: %ld\r\n"
+                             "Connection: close\r\n"
+                             "\r\n",
+                             file_size);
+
+    // 发送头部
+    tcp_send_data(tcb, header, header_len);
+    // 发送内容 (注意：如果文件很大，需要分多次调用 tcp_send_data)
+    tcp_send_data(tcb, file_buf, file_size);
+
+    free(file_buf);
+
+    // 6. HTTP/1.1 建议处理完后关闭连接（简单实现）
+    // 或者等待浏览器超时关闭
+    printf("[HTTP] Sent file: %s (%ld bytes)\n", full_path, file_size);
 }
 void tcp_init()
 {
