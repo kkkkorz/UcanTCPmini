@@ -4,6 +4,7 @@
 #include "packet.h"
 #include "header.h"
 #include "stdint.h"
+#include "time.h"
 
 #define TCB_TABLE_MAX_SIZE 100
 #define TCP_FLAG_FIN 0
@@ -15,15 +16,25 @@
 #define TCP_FLAG_ECE 6
 #define TCP_FLAG_CWR 7
 
-
 typedef struct tcp_tcb
 {
     uint32_t local_ip, remote_ip;
     uint16_t local_port, remote_port;
-    uint32_t snd_nxt; // 下一个要发的 Seq
-    uint32_t rcv_nxt; // 期望收到的下一个 Ack (即对方的 Seq + Len)
     int state;        // ESTABLISHED, etc.
     // 未来可以挂载应用层数据，比如 http_context
+
+    // --- 滑动窗口核心变量 ---
+    uint32_t snd_una; // 已发送但未确认的序列号 (窗口左边界)
+    uint32_t snd_nxt; // 下一个要发送的序列号 (窗口内右侧)
+    uint16_t snd_wnd; // 对方的接收窗口大小 (从对方包头获取)
+
+    uint32_t rcv_nxt; // 期望收到的下一个序列号
+    uint16_t rcv_wnd; // 我的接收窗口 (固定设为 65535)
+
+    // --- 超时重传控制 ---
+    uint8_t *retrans_buf; // 重传缓冲区，暂存已发未确认的数据
+    uint32_t retrans_len;
+    clock_t last_send_time; // 上次发送时间，用于简易 RTO
 } tcp_tcb;
 typedef struct
 {
@@ -31,6 +42,7 @@ typedef struct
     uint32_t remote_ip;
     uint16_t local_port;
     uint16_t remote_port;
+
 } tcp_key;
 typedef struct tcb_node
 {
@@ -45,9 +57,8 @@ typedef enum
 } Status;
 static tcb_node *tcb_table[TCB_TABLE_MAX_SIZE];
 tcb_node *get_tcb(tcp_key *key);
-int insert_tcb(tcb_node *node);
+tcb_node *insert_tcb(tcb_node *node);
 tcb_node *get_tcb(tcp_key *key);
-Status insert_tcb(tcb_node *node);
 tcp_tcb *create_tcb();
 
 // tcp seq
@@ -62,13 +73,14 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
 void set_flag(uint8_t *flags, uint8_t value, uint8_t target);
 void remov_tcp_header(base_packet *data);
 void tcp_init();
-
+void tcp_show_netstat();
 tcb_node *tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t destination_port);
 base_packet *handle_sencond_shake(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip);
 void tcp_send_data(tcb_node *node, char *payload_data, uint32_t data_len);
 void set_tcb_node(tcb_node *node, uint16_t local_port, uint8_t *remote_ip, uint16_t remote_port);
 void set_tcp_header(tcb_node *node, TCP_HEADER *tcp_header);
 void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *data);
+base_packet *handle_tcp_fin(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip);
 // TCB定义
 /* TCP 状态定义 (符合 RFC 793 标准) */
 
@@ -85,9 +97,5 @@ void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *da
 #define TCP_STATE_CLOSING 8    // 两端同时发送 FIN，进入交叉关闭状态
 #define TCP_STATE_LAST_ACK 9   // 服务器发完最后的 FIN，等待对方最后的 ACK
 #define TCP_STATE_TIME_WAIT 10 // 等待足够时间以确保对方收到最后的 ACK (通常是 2MSL)
-
-
-
-
 
 #endif
