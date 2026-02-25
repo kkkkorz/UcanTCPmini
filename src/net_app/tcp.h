@@ -35,6 +35,7 @@ typedef struct tcp_tcb
     uint8_t *retrans_buf; // 重传缓冲区，暂存已发未确认的数据
     uint32_t retrans_len;
     clock_t last_send_time; // 上次发送时间，用于简易 RTO
+    uint32_t retrans_seq;   // 本次重传对应的起始序列号
 } tcp_tcb;
 typedef struct
 {

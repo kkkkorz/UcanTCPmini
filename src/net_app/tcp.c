@@ -124,7 +124,17 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
 
     // 更新对端窗口大小和已确认序列号，供发送端进行简单流量控制
     tcb->tcb.snd_wnd = SWAP_UINT16(tcp_packet_receive->window);
-    tcb->tcb.snd_una = SWAP_UINT32(tcp_packet_receive->ack);
+    uint32_t ack_seq = SWAP_UINT32(tcp_packet_receive->ack);
+    tcb->tcb.snd_una = ack_seq;
+
+    // 如果 ACK 已经覆盖了当前重传窗口的数据，则认为这段数据已成功确认
+    if (tcb->tcb.retrans_buf &&
+        ack_seq >= tcb->tcb.retrans_seq + tcb->tcb.retrans_len)
+    {
+        free(tcb->tcb.retrans_buf);
+        tcb->tcb.retrans_buf = NULL;
+        tcb->tcb.retrans_len = 0;
+    }
 
     // 2. 状态机迁移：处理挥手过程中的 ACK
     // -----------------------------------------------------------
@@ -361,15 +371,23 @@ void tcp_send_data(tcb_node *node, char *payload_data, uint32_t data_len)
         return; // 简单起见，这里直接丢弃，实际应存入等待队列
     }
 
-    // 2. 存入重传缓冲区 (仅演示单包重传)
+    // 2. 记录当前发送段的起始序列号
+    node->tcb.retrans_seq = node->tcb.snd_nxt;
+
+    // 3. 存入重传缓冲区 (当前实现一次只跟踪一段数据)
     if (node->tcb.retrans_buf)
         free(node->tcb.retrans_buf);
     node->tcb.retrans_buf = malloc(data_len);
+    if (!node->tcb.retrans_buf)
+    {
+        printf("[TCP] 分配重传缓冲区失败，发送数据中止\n");
+        return;
+    }
     memcpy(node->tcb.retrans_buf, payload_data, data_len);
     node->tcb.retrans_len = data_len;
     node->tcb.last_send_time = clock();
 
-    // 3. 封装并发送
+    // 4. 封装并发送
     TCP_HEADER header;
     memset(&header, 0, sizeof(TCP_HEADER));
     set_tcp_header(node, &header);
@@ -389,7 +407,7 @@ void tcp_send_data(tcb_node *node, char *payload_data, uint32_t data_len)
     pseudo_header_checksum(full_packet, &ip_info);
     ip_send(full_packet, TCP_TYPE, dest_ip);
 
-    // 4. 更新 snd_nxt
+    // 5. 更新 snd_nxt（下一个可发送序列号）
     node->tcb.snd_nxt += data_len;
 }
 // 设置tcp头部通用信息
@@ -550,20 +568,58 @@ void tcp_show_netstat()
 // 检查重传
 void check_retransmit()
 {
+    // 简单的超时重传：遍历所有 TCB，对于仍有未确认数据且超过 RTO 的连接，
+    // 直接从 snd_una 对应的序列号重发当前重传缓冲区的数据。
+    const clock_t RTO = CLOCKS_PER_SEC / 2; // 约 500ms
+
     for (int i = 0; i < TCB_TABLE_MAX_SIZE; i++)
     {
         tcb_node *curr = tcb_table[i];
         while (curr)
         {
-            if (curr->valid && curr->tcb.retrans_buf)
+            if (curr->valid &&
+                curr->tcb.state == TCP_STATE_ESTABLISHED &&
+                curr->tcb.retrans_buf &&
+                curr->tcb.retrans_len > 0)
             {
-                // 如果超过 500ms 未收到 ACK
-                if ((clock() - curr->tcb.last_send_time) > 500)
+                // 如果超过 RTO 未收到足够的 ACK，则触发重传
+                if ((clock() - curr->tcb.last_send_time) > RTO)
                 {
-                    printf("[TCP] Timeout! Retransmitting Seq: %u\n", curr->tcb.snd_una);
-                    // 重新调用底层发送逻辑，这里为了简洁只做示意
+                    printf("[TCP] Timeout! Retransmitting Seq: %u, Len: %u\n",
+                           curr->tcb.snd_una, curr->tcb.retrans_len);
 
-                    // 实际应重发 snd_una 对应的数据
+                    // 构造 TCP 头部，以 snd_una 作为当前发送序列号
+                    TCP_HEADER header;
+                    memset(&header, 0, sizeof(TCP_HEADER));
+                    header.source_port = curr->tcb.local_port;
+                    header.destination_port = curr->tcb.remote_port;
+                    header.seq = SWAP_UINT32(curr->tcb.snd_una);
+                    header.ack = SWAP_UINT32(curr->tcb.rcv_nxt);
+                    header.flags = (1 << TCP_FLAG_ACK) | (1 << TCP_FLAG_PSH);
+                    header.header_len = 0x50;
+                    header.window = SWAP_UINT16(curr->tcb.rcv_wnd);
+
+                    base_packet payload = {curr->tcb.retrans_buf,
+                                           curr->tcb.retrans_len,
+                                           0};
+                    base_packet *full_packet = malloc(sizeof(base_packet));
+                    if (!full_packet)
+                    {
+                        printf("[TCP] 重传时分配 full_packet 失败\n");
+                        curr = curr->next;
+                        continue;
+                    }
+                    add_tcp_header(full_packet, &header, &payload);
+
+                    uint8_t dest_ip[4];
+                    UINT32_TO_IP(dest_ip, curr->tcb.remote_ip);
+
+                    IP_HEADER ip_info;
+                    memcpy(ip_info.destination_ip, dest_ip, 4);
+                    memcpy(ip_info.source_ip, host_ip_addr, 4);
+                    pseudo_header_checksum(full_packet, &ip_info);
+                    ip_send(full_packet, TCP_TYPE, dest_ip);
+
                     curr->tcb.last_send_time = clock();
                 }
             }

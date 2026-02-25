@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 用1500行代码从0开始实现TCP/IP协议栈+WEB服务器
  *
  * 本源码旨在用最简单、最易懂的方式帮助你快速地了解TCP/IP以及HTTP工作原理的主要核心知识点。
@@ -34,6 +34,7 @@
 #include "tcp_conversation.h"
 #include "udp_conversation.h"
 #include "webserver.h"
+#include "tcp.h"
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -133,6 +134,10 @@ static void *net_send_thread(void *arg) // 发送数据包的线程
                 packet_queue_send[i] = NULL;
             }
         }
+
+        // 定期检查是否有需要重传的 TCP 报文
+        check_retransmit();
+
         Sleep(1);
     }
     return NULL;
