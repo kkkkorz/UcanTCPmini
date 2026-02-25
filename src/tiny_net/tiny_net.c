@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 用1500行代码从0开始实现TCP/IP协议栈+WEB服务器
  *
  * 本源码旨在用最简单、最易懂的方式帮助你快速地了解TCP/IP以及HTTP工作原理的主要核心知识点。
@@ -43,26 +43,49 @@ int packet_queue_receive_index = -1;                  // 队尾
 char *read_file(const char *filename)
 {
     FILE *file = fopen(filename, "r");
-    
     if (!file)
     {
         printf("无法打开文件: %s\n", filename);
         return NULL;
     }
 
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    char *buffer = (char *)malloc(file_size + 1);
-    if (!buffer)
+    if (fseek(file, 0, SEEK_END) != 0)
     {
+        printf("读取文件失败（fseek 出错）: %s\n", filename);
         fclose(file);
         return NULL;
     }
 
-    fread(buffer, 1, file_size, file);
-    buffer[file_size] = '\0';
+    long file_size = ftell(file);
+    if (file_size < 0)
+    {
+        printf("读取文件大小失败: %s\n", filename);
+        fclose(file);
+        return NULL;
+    }
+
+    if (fseek(file, 0, SEEK_SET) != 0)
+    {
+        printf("读取文件失败（fseek 出错）: %s\n", filename);
+        fclose(file);
+        return NULL;
+    }
+
+    char *buffer = (char *)malloc((size_t)file_size + 1);
+    if (!buffer)
+    {
+        printf("内存分配失败，无法读取文件: %s\n", filename);
+        fclose(file);
+        return NULL;
+    }
+
+    size_t read_len = fread(buffer, 1, (size_t)file_size, file);
+    if (read_len != (size_t)file_size)
+    {
+        printf("读取文件内容不完整: %s\n", filename);
+        // 这里仍然返回已经读取的内容，方便调试使用
+    }
+    buffer[read_len] = '\0';
     fclose(file);
 
     return buffer;
@@ -71,25 +94,61 @@ char *read_file(const char *filename)
 void load_config()
 {
     char *json_data = read_file("..\\src\\config.json");
+    if (json_data == NULL)
+    {
+        printf("配置文件读取失败，使用默认配置\n");
+        return;
+    }
+
     cJSON *config = cJSON_Parse(json_data);
+    if (config == NULL)
+    {
+        printf("配置文件解析失败，JSON 格式错误\n");
+        free(json_data);
+        return;
+    }
     cJSON *hi = cJSON_GetObjectItem(config, "host_ip");
     cJSON *hm = cJSON_GetObjectItem(config, "host_mac");
     cJSON *rhi = cJSON_GetObjectItem(config, "real_host_ip");
     cJSON *rhm = cJSON_GetObjectItem(config, "real_host_mac");
-    if (hi && hm && rhi && rhm)
+    if (hi && hm && rhi && rhm &&
+        cJSON_IsString(hi) && cJSON_IsString(hm) &&
+        cJSON_IsString(rhi) && cJSON_IsString(rhm))
     {
-        // 解析IP地址
-        sscanf(hi->valuestring, "%hhu.%hhu.%hhu.%hhu", &host_ip_addr[0], &host_ip_addr[1], &host_ip_addr[2], &host_ip_addr[3]);
-        // sscanf(rhi->valuestring, "%hhu.%hhu.%hhu.%hhu", &real_host_ip[0], &real_host_ip[1], &real_host_ip[2], &real_host_ip[3]);
-        real_host_ip = rhi->valuestring;
-        // 解析MAC地址
-        sscanf(hm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &host_mac[0], &host_mac[1], &host_mac[2], &host_mac[3], &host_mac[4], &host_mac[5]);
-        sscanf(rhm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &real_host_mac[0], &real_host_mac[1], &real_host_mac[2], &real_host_mac[3], &real_host_mac[4], &real_host_mac[5]);
+        // 解析主机 IP
+        if (sscanf(hi->valuestring, "%hhu.%hhu.%hhu.%hhu",
+                   &host_ip_addr[0], &host_ip_addr[1],
+                   &host_ip_addr[2], &host_ip_addr[3]) != 4)
+        {
+            printf("host_ip 解析失败，保持默认值\n");
+        }
+
+        // 解析物理网卡 IP 字符串，拷贝到全局缓冲区
+        strncpy(real_host_ip, rhi->valuestring, sizeof(real_host_ip) - 1);
+        real_host_ip[sizeof(real_host_ip) - 1] = '\0';
+
+        // 解析 MAC 地址
+        if (sscanf(hm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                   &host_mac[0], &host_mac[1], &host_mac[2],
+                   &host_mac[3], &host_mac[4], &host_mac[5]) != 6)
+        {
+            printf("host_mac 解析失败，保持默认值\n");
+        }
+
+        if (sscanf(rhm->valuestring, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                   &real_host_mac[0], &real_host_mac[1], &real_host_mac[2],
+                   &real_host_mac[3], &real_host_mac[4], &real_host_mac[5]) != 6)
+        {
+            printf("real_host_mac 解析失败，保持默认值\n");
+        }
     }
     else
     {
-        printf("配置文件格式错误\n");
+        printf("配置文件字段缺失或类型错误，使用默认配置\n");
     }
+
+    cJSON_Delete(config);
+    free(json_data);
 }
 
 void net_init()
@@ -105,18 +164,48 @@ void net_init()
 // 接收数据包
 void net_recv()
 {
-    uint8_t *buffer = malloc(MAX_PACKET_LEN);
+    uint8_t *buffer = (uint8_t *)malloc(MAX_PACKET_LEN);
+    if (!buffer)
+    {
+        printf("内存分配失败，无法接收数据包\n");
+        return;
+    }
+
     uint32_t len = pcap_device_read(device, buffer);
     if (len > 0)
     {
-        base_packet *data = malloc(sizeof(base_packet));
-        data->buffer = malloc(len); // 只保留数据部分
+        base_packet *data = (base_packet *)malloc(sizeof(base_packet));
+        if (!data)
+        {
+            printf("内存分配失败，丢弃接收到的数据包\n");
+            free(buffer);
+            return;
+        }
+
+        data->buffer = (uint8_t *)malloc(len); // 只保留数据部分
+        if (!data->buffer)
+        {
+            printf("内存分配失败，丢弃接收到的数据包\n");
+            free(data);
+            free(buffer);
+            return;
+        }
+
         data->len = len;
         data->offset = 0;
         memcpy(data->buffer, buffer, len);
-        packet_queue_receive[++packet_queue_receive_index >= PACKET_QUEUE_SIZE ? 0 : packet_queue_receive_index] = data;
+
+        // 简单的循环队列，下标安全取模
+        packet_queue_receive_index = (packet_queue_receive_index + 1) % PACKET_QUEUE_SIZE;
+        if (packet_queue_receive[packet_queue_receive_index] != NULL)
+        {
+            // 队列满时简单丢弃最旧的数据包，避免内存泄漏
+            free(packet_queue_receive[packet_queue_receive_index]->buffer);
+            free(packet_queue_receive[packet_queue_receive_index]);
+        }
+        packet_queue_receive[packet_queue_receive_index] = data;
     }
-    else if (len < 0)
+    else if ((int32_t)len < 0)
     {
         printf("接收数据包出错\n");
     }
@@ -144,14 +233,31 @@ void add_ethernet_header(base_packet *data, uint8_t *destination, uint8_t *sourc
 // 数据链路层发送，上层调用无需关心数据包头
 void net_data_send(base_packet *data)
 {
-    // 封装为消息队列的节点
-    packet_queue_send[++packet_queue_send_index >= PACKET_QUEUE_SIZE ? 0 : packet_queue_send_index] = data;
+    if (data == NULL)
+    {
+        return;
+    }
+
+    // 简单的循环队列，下标安全取模
+    packet_queue_send_index = (packet_queue_send_index + 1) % PACKET_QUEUE_SIZE;
+    if (packet_queue_send[packet_queue_send_index] != NULL)
+    {
+        // 队列满时丢弃旧数据，避免内存泄漏
+        free(packet_queue_send[packet_queue_send_index]->buffer);
+        free(packet_queue_send[packet_queue_send_index]);
+    }
+    packet_queue_send[packet_queue_send_index] = data;
 }
 
 // 处理数据包
 
 void packet_process(base_packet *packet_receive)
 {
+    if (packet_receive == NULL || packet_receive->buffer == NULL || packet_receive->len < sizeof(ETH_HEADER))
+    {
+        return;
+    }
+
     // 判断数据包类型
     ETH_HEADER *header = (ETH_HEADER *)(packet_receive->buffer + packet_receive->offset);
 

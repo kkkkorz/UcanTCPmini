@@ -3,7 +3,8 @@
 #include "config.h"
 #include "util.h"
 #include "ip.h"
-// 函数名重构为handle_sencond_shake这种形式
+#include "http.h"
+#include "webserver.h"
 
 base_packet *tcp_process(base_packet *data, uint32_t src_ip, uint32_t des_ip)
 {
@@ -49,6 +50,13 @@ base_packet *handle_tcp_syn(base_packet *data, uint32_t src_ip, uint32_t dst_ip)
 {
     TCP_HEADER *tcp_packet_receive = (TCP_HEADER *)(data->buffer + data->offset);
 
+    // 仅接受当前 WebServer 监听端口上的连接请求
+    uint16_t dst_port_host = SWAP_UINT16(tcp_packet_receive->destination_port);
+    if (dst_port_host != webserver_get_listen_port())
+    {
+        return NULL;
+    }
+
     // 1. 准备 TCB 节点
     tcb_node *node = malloc(sizeof(tcb_node));
     memset(node, 0, sizeof(tcb_node));
@@ -66,6 +74,11 @@ base_packet *handle_tcp_syn(base_packet *data, uint32_t src_ip, uint32_t dst_ip)
     node->tcb.rcv_nxt = guest_seq + 1;
     // 初相对始序列号
     node->tcb.snd_nxt = (uint32_t)time(NULL);
+
+    // 初始化窗口相关字段
+    node->tcb.snd_wnd = 65535;
+    node->tcb.rcv_wnd = 65535;
+    node->tcb.snd_una = node->tcb.snd_nxt;
 
     // 设置状态
     node->tcb.state = TCP_STATE_SYN_RECV;
@@ -108,6 +121,10 @@ base_packet *handle_tcp_ack(base_packet *receive_data, uint32_t src_ip, uint32_t
 
     if (tcb == NULL)
         return NULL;
+
+    // 更新对端窗口大小和已确认序列号，供发送端进行简单流量控制
+    tcb->tcb.snd_wnd = SWAP_UINT16(tcp_packet_receive->window);
+    tcb->tcb.snd_una = SWAP_UINT32(tcp_packet_receive->ack);
 
     // 2. 状态机迁移：处理挥手过程中的 ACK
     // -----------------------------------------------------------
@@ -267,6 +284,9 @@ tcb_node *tcp_connect(uint8_t *destination_ip, uint32_t source_port, uint32_t de
     // 2. 序列号同步与状态设置
     node->tcb.rcv_nxt = 0;
     node->tcb.snd_nxt = (uint32_t)time(NULL);
+    node->tcb.snd_wnd = 65535;
+    node->tcb.rcv_wnd = 65535;
+    node->tcb.snd_una = node->tcb.snd_nxt;
     node->tcb.state = TCP_STATE_SYN_SENT;
 
     // 3. 构造并发送 SYN 包
@@ -326,7 +346,10 @@ base_packet *handle_sencond_shake(base_packet *receive_data, uint32_t src_ip, ui
 // 完善：发送数据函数，增加滑动窗口逻辑
 void tcp_send_data(tcb_node *node, char *payload_data, uint32_t data_len)
 {
-    if (node == NULL || node->tcb.state != TCP_STATE_ESTABLISHED)
+    if (node == NULL || payload_data == NULL || data_len == 0)
+        return;
+
+    if (node->tcb.state != TCP_STATE_ESTABLISHED)
         return;
 
     // 1. 流量控制：检查对方窗口空间
@@ -549,81 +572,6 @@ void check_retransmit()
     }
 }
 
-void app_layer_dispatch(tcb_node *tcb, char *data, uint32_t len)
-{
-    // 简单判断：如果前 3 个字节是 "GET"，说明是 HTTP 请求
-    if (strncmp(data, "GET", 3) == 0)
-    {
-        printf("[HTTP]  GET \n");
-        handle_http_request(tcb, data);
-    }
-}
-// 假设你的 HTML 文件都放在工程目录下的 "www" 文件夹里
-#define WEB_ROOT "./www"
-
-void handle_http_request(tcb_node *tcb, char *request_data)
-{
-    char method[10], path[256], protocol[20];
-
-    // 1. 解析请求行 (提取方法和路径)
-    // sscanf 会根据空格切分字符串
-    if (sscanf(request_data, "%s %s %s", method, path, protocol) < 3)
-    {
-        return;
-    }
-
-    // 2. 如果访问根目录 /，默认指向 index.html
-    if (strcmp(path, "/") == 0)
-    {
-        strcpy(path, "/index.html");
-    }
-
-    // 3. 拼接完整的文件路径
-    char full_path[512];
-    snprintf(full_path, sizeof(full_path), "%s%s", WEB_ROOT, path);
-
-    // 4. 读取文件内容
-    FILE *file = fopen(full_path, "rb");
-    if (file == NULL)
-    {
-        // 如果文件不存在，返回 404
-        printf("[HTTP] File not found: %s\n", full_path);
-        char *not_found_resp = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
-        tcp_send_data(tcb, not_found_resp, strlen(not_found_resp));
-        return;
-    }
-
-    // 获取文件大小
-    fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // 读取文件到缓冲区
-    char *file_buf = malloc(file_size);
-    fread(file_buf, 1, file_size, file);
-    fclose(file);
-
-    // 5. 构造并发送响应头
-    char header[256];
-    int header_len = sprintf(header,
-                             "HTTP/1.1 200 OK\r\n"
-                             "Content-Type: text/html\r\n"
-                             "Content-Length: %ld\r\n"
-                             "Connection: close\r\n"
-                             "\r\n",
-                             file_size);
-
-    // 发送头部
-    tcp_send_data(tcb, header, header_len);
-    // 发送内容 (注意：如果文件很大，需要分多次调用 tcp_send_data)
-    tcp_send_data(tcb, file_buf, file_size);
-
-    free(file_buf);
-
-    // 6. HTTP/1.1 建议处理完后关闭连接（简单实现）
-    // 或者等待浏览器超时关闭
-    printf("[HTTP] Sent file: %s (%ld bytes)\n", full_path, file_size);
-}
 void tcp_init()
 {
 }

@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>关于协议栈 - UCanTCPmini</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site-header">
+    <h1>关于这个协议栈</h1>
+    <p class="subtitle">从数据链路到 HTTP 的最小闭环</p>
+    <nav class="nav">
+        <a href="/index.html">首页</a>
+        <a href="/about.html" class="active">关于协议栈</a>
+        <a href="/demo.html">请求示例</a>
+    </nav>
+</header>
+
+<main class="container">
+    <section class="card">
+        <h2>实现范围</h2>
+        <ul>
+            <li>数据链路层：通过 npcap 捕获和发送以太网帧。</li>
+            <li>网络层：IPv4 头部封装、校验和计算、按协议号分发。</li>
+            <li>传输层：TCP 三次握手、挥手、基本状态机和简单滑动窗口。</li>
+            <li>应用层：HTTP/1.1 简化实现，支持静态文件 GET 请求。</li>
+        </ul>
+    </section>
+
+    <section class="card">
+        <h2>你可以做的实验</h2>
+        <ol>
+            <li>用浏览器多次刷新不同页面，观察 TCP 连接数和状态变化。</li>
+            <li>在代码中增加日志，追踪一次 HTTP 请求从网卡到应用层的完整路径。</li>
+            <li>尝试加入新的 MIME 类型或增加一个简单的 JSON API。</li>
+        </ol>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <p>你可以随时根据需要扩展这个协议栈，例如增加更多应用协议或完善 TCP 细节。</p>
+</footer>
+</body>
+</html>
+

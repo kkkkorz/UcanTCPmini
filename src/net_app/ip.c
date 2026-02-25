@@ -57,19 +57,10 @@ void ip_send(base_packet *data, uint8_t protocol, uint8_t *dest_ip) //这里判�
     uint8_t *dest_mac = get_mac_by_ip(dest_ip);
     if (dest_mac == NULL)
     {
-        arp_request(dest_ip, NULL); // 发送 ARP 请求
-        uint32_t wait_time = 0;
-        while (get_mac_by_ip(dest_ip) == NULL)
-        {
-            Sleep(10);
-            wait_time += 10;
-            if (wait_time > 1000)
-            {
-                printf("Timeout when arp\n");
-                return;
-            }
-        }
-        dest_mac = get_mac_by_ip(dest_ip);
+        // 发送 ARP 请求后立即返回，交给后续报文或对端重传使用缓存的 MAC
+        // 不能在这里阻塞等待，否则当前处理线程无法去处理 ARP 应答包
+        arp_request(dest_ip, NULL);
+        return;
     }
 
     // 向下传递数据包

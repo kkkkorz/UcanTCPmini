@@ -33,6 +33,7 @@
 #include "header.h"
 #include "tcp_conversation.h"
 #include "udp_conversation.h"
+#include "webserver.h"
 static void *net_run_thread(void *arg)
 {
     (void)arg;
@@ -163,6 +164,10 @@ int main(void)
 {
     // 初始化协议栈
     net_init();
+
+    // 启动 Web 服务器（监听默认端口 80）
+    webserver_listen(WEBSERVER_DEFAULT_PORT);
+    webserver_print_banner();
 
     thread_create(net_run_thread, NULL);
     thread_create(net_cmd_thread, NULL);

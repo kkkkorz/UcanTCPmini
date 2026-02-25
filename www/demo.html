@@ -1,0 +1,51 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>请求示例 - UCanTCPmini</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site-header">
+    <h1>HTTP 请求示例</h1>
+    <p class="subtitle">配合抓包和日志，观察一次完整请求</p>
+    <nav class="nav">
+        <a href="/index.html">首页</a>
+        <a href="/about.html">关于协议栈</a>
+        <a href="/demo.html" class="active">请求示例</a>
+    </nav>
+</header>
+
+<main class="container">
+    <section class="card">
+        <h2>建议的调试步骤</h2>
+        <ol>
+            <li>在命令行中运行程序，确认看到 WebServer 启动提示。</li>
+            <li>浏览器打开本页：<code>http://&lt;host_ip&gt;:80/demo.html</code>。</li>
+            <li>观察控制台输出的 TCP/HTTP 日志。</li>
+            <li>必要时用 Wireshark 抓包，对照三次握手 / 数据传输 / 四次挥手过程。</li>
+        </ol>
+    </section>
+
+    <section class="card card-accent">
+        <h2>简单动态效果</h2>
+        <p>下面这个按钮只使用了一点点 JS，方便确认静态 JS 资源是否能正常加载。</p>
+        <button id="ping-btn">点我测试前端交互</button>
+        <p id="ping-result" class="small-text muted"></p>
+    </section>
+</main>
+
+<script>
+    (function () {
+        var btn = document.getElementById('ping-btn');
+        var result = document.getElementById('ping-result');
+        if (!btn || !result) return;
+        btn.addEventListener('click', function () {
+            var now = new Date();
+            result.textContent = '前端 JS 已加载，当前时间：' + now.toLocaleTimeString();
+        });
+    })();
+</script>
+</body>
+</html>
+

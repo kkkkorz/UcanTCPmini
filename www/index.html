@@ -1,3 +1,54 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>UCanTCPmini Demo - 首页</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="site-header">
+    <h1>UCanTCPmini Web Server</h1>
+    <p class="subtitle">基于自实现 TCP/IP 协议栈的迷你 HTTP 服务器</p>
+    <nav class="nav">
+        <a href="/index.html">首页</a>
+        <a href="/about.html">关于协议栈</a>
+        <a href="/demo.html">请求示例</a>
+    </nav>
+</header>
+
+<main class="container">
+    <section class="card">
+        <h2>欢迎</h2>
+        <p>
+            你现在看到的页面，是通过你自己实现的 TCP/IP 协议栈 + HTTP 服务器直接返回给浏览器的静态资源。
+        </p>
+        <p>
+            建议多开几个标签页，同时访问不同页面来观察连接建立、数据收发和关闭的状态变化。
+        </p>
+    </section>
+
+    <section class="grid">
+        <article class="card card-accent">
+            <h3>支持静态文件</h3>
+            <p>HTML、CSS、JS、图片等静态资源都可以通过简单的 GET 请求访问。</p>
+        </article>
+        <article class="card">
+            <h3>最小可用 HTTP</h3>
+            <p>实现了基础的请求行解析、状态码处理，以及按扩展名返回合适的 Content-Type。</p>
+        </article>
+        <article class="card">
+            <h3>方便调试</h3>
+            <p>配合命令行中的日志输出，可以从浏览器到协议栈完整观察一次 HTTP 请求的生命周期。</p>
+        </article>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <p>UCanTCPmini Demo · 浏览器直接访问 <code>http://&lt;host_ip&gt;:80/</code></p>
+</footer>
+</body>
+</html>
+
 <h1>
     hello world!
 </h1>

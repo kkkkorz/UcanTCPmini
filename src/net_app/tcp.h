@@ -82,7 +82,6 @@ void set_tcp_header(tcb_node *node, TCP_HEADER *tcp_header);
 void add_tcp_header(base_packet *tcp_packet, TCP_HEADER *header, base_packet *data);
 base_packet *handle_tcp_fin(base_packet *receive_data, uint32_t src_ip, uint32_t des_ip);
 void app_layer_dispatch(tcb_node *tcb, char *data, uint32_t len);
-void handle_http_request(tcb_node *tcb, char *request);
 // TCB定义
 /* TCP 状态定义 (符合 RFC 793 标准) */
 

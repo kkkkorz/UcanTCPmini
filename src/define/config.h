@@ -5,9 +5,9 @@
 #include "packet.h"
 #include "header.h"
 
-//主机的IP地址和MAC地址
-//static char* real_host_ip = "192.168.254.1";//模拟一个IP地址
-static char* real_host_ip = "192.168.254.1";
+// 主机的 IP 地址和 MAC 地址
+// 将原先的指针改为固定长度缓冲区，避免指向临时字符串带来的悬空指针问题
+static char real_host_ip[16] = "192.168.254.1";
 //0A:00:27:00:00:13
 //static uint8_t real_host_mac[6] = {0x0a,0x00,0x27,0x00,0x00,0x13};
 // 00-1C-42-6E-B5-C4
