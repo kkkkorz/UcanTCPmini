@@ -1,4 +1,4 @@
-#ifndef HTTP_H
+﻿#ifndef HTTP_H
 #define HTTP_H
 
 #include <stdint.h>
